@@ -3932,6 +3932,125 @@ function get10YrTopicAnalysisProfile(examType, subjectName, topicName) {
     };
 }
 
+function buildUniquePerQuestionVisualSvg(subjectName, topicName, questionText, examYear = 2025, qIndex = 0) {
+    const rawQ = String(questionText || "");
+    const cleanQ = rawQ.replace(/^\[[^\]]+\]\s*/g, "").replace(/^\([^)]+\)\s*/g, "").trim();
+    const low = `${subjectName} ${topicName} ${cleanQ}`.toLocaleLowerCase("tr-TR");
+    const nums = (cleanQ.match(/\d+(?:[.,]\d+)?/g) || []).map(s => s.replace(",", "."));
+    const n1 = nums[0] || String(12 + (qIndex * 6));
+    const n2 = nums[1] || String(18 + (qIndex * 4));
+    const n3 = nums[2] || String(24 + (qIndex * 5));
+
+    // Her soru için sorunun kendi metnindeki sayıları/kavramları görselleştiren benzersiz şema üret!
+    // Eğer soru metni salt sözel/öncüllü bir soruysa ve sayı/şekil/deney içermiyorsa gereksiz tekrar eden şema basma (gerçek sınav kitapçığı gibi yalnızca şekilli/verili sorularda veya her soruya özel veri şemasıyla göster).
+    const isRomanOnlyVerbal = (cleanQ.includes("I.") && cleanQ.includes("II.")) && nums.length === 0 && !low.includes("üçgen") && !low.includes("düzenek") && !low.includes("grafik") && !low.includes("tablo");
+    if (isRomanOnlyVerbal && qIndex % 2 === 1) {
+        return "";
+    }
+
+    const palettes = [
+        { bg: "#F5F3FF", border: "#C4B5FD", accent: "#7C3AED", dark: "#4C1D95", soft: "#EDE9FE" },
+        { bg: "#EFF6FF", border: "#93C5FD", accent: "#0284C7", dark: "#075985", soft: "#E0F2FE" },
+        { bg: "#ECFDF5", border: "#86EFAC", accent: "#059669", dark: "#065F46", soft: "#D1FAE5" },
+        { bg: "#FFFBEB", border: "#FCD34D", accent: "#D97706", dark: "#78350F", soft: "#FEF3C7" },
+        { bg: "#FDF2F8", border: "#F9A8D4", accent: "#DB2777", dark: "#831843", soft: "#FCE7F3" }
+    ];
+    const pal = palettes[Math.abs(qIndex) % palettes.length];
+    const shortTopic = String(topicName || subjectName).replace(/^\d+\.\s*ünite\s*:\s*/i, "").split("(")[0].trim().substring(0, 36);
+
+    // 1. EBOB - EKOK, Çarpanlar, Bölünebilme, Nöbet / Parsel / Çuval Soruları (Sorudaki n1 ve n2 sayılarını doğrudan çiz!)
+    if (low.includes("ebob") || low.includes("ekok") || low.includes("çarpan") || low.includes("bölen") || low.includes("nöbet") || low.includes("parsel") || low.includes("çuval")) {
+        const modeVariant = qIndex % 3;
+        if (modeVariant === 0) {
+            return `
+            <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.71rem;font-weight:800;color:${pal.dark};margin-bottom:4px;">📐 [${examYear} Soru #${qIndex + 1} Veri Modeli] — ${n1} ve ${n2} Değerleri İçin Eş Parçalama / Kat Şeması</div>
+                <svg viewBox="0 0 380 110" style="width:100%;max-width:355px;height:auto;display:block;margin:0 auto;">
+                    <rect x="18" y="16" width="150" height="34" rx="6" fill="${pal.soft}" stroke="${pal.accent}" stroke-width="2"/>
+                    <text x="93" y="37" text-anchor="middle" fill="${pal.dark}" font-size="11" font-weight="bold">1. Değer / Boyut = ${n1}</text>
+                    <rect x="18" y="58" width="210" height="34" rx="6" fill="#FFFFFF" stroke="${pal.accent}" stroke-width="2"/>
+                    <text x="123" y="79" text-anchor="middle" fill="${pal.dark}" font-size="11" font-weight="bold">2. Değer / Boyut = ${n2}</text>
+                    <rect x="245" y="22" width="118" height="64" rx="8" fill="#FFFFFF" stroke="${pal.dark}" stroke-width="2" stroke-dasharray="4,2"/>
+                    <text x="304" y="46" text-anchor="middle" fill="${pal.accent}" font-size="10" font-weight="bold">Ortak Bölen / Kat</text>
+                    <text x="304" y="66" text-anchor="middle" fill="${pal.dark}" font-size="10.5" font-weight="bold">(${n1} , ${n2}) Analizi</text>
+                </svg>
+            </div>`;
+        } else if (modeVariant === 1) {
+            return `
+            <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.71rem;font-weight:800;color:${pal.dark};margin-bottom:4px;">🔢 [${examYear} Soru #${qIndex + 1} Çarpan Ağacı] — ${n1} Sayısının Asal Çarpan & Bölen Yapısı</div>
+                <svg viewBox="0 0 380 110" style="width:100%;max-width:355px;height:auto;display:block;margin:0 auto;">
+                    <circle cx="110" cy="24" r="18" fill="${pal.accent}"/>
+                    <text x="110" y="28" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="bold">${n1}</text>
+                    <line x1="96" y1="38" x2="62" y2="70" stroke="${pal.accent}" stroke-width="2.2"/>
+                    <line x1="124" y1="38" x2="158" y2="70" stroke="${pal.accent}" stroke-width="2.2"/>
+                    <circle cx="58" cy="82" r="15" fill="${pal.soft}" stroke="${pal.accent}" stroke-width="2"/>
+                    <text x="58" y="86" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">p₁ᵃ</text>
+                    <circle cx="162" cy="82" r="15" fill="${pal.soft}" stroke="${pal.accent}" stroke-width="2"/>
+                    <text x="162" y="86" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">p₂ᵇ</text>
+                    <rect x="210" y="22" width="152" height="68" rx="8" fill="#FFFFFF" stroke="${pal.border}" stroke-width="2"/>
+                    <text x="286" y="46" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">Soru Verisi: N = ${n1}</text>
+                    <text x="286" y="68" text-anchor="middle" fill="${pal.accent}" font-size="9.5" font-weight="bold">PBS = (a+1)·(b+1)</text>
+                </svg>
+            </div>`;
+        }
+        return `
+        <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
+            <div style="font-size:0.71rem;font-weight:800;color:${pal.dark};margin-bottom:4px;">⏱️ [${examYear} Soru #${qIndex + 1} Periyot Doğrusu] — ${n1} ve ${n2} Birimlik Tekrarlama Periyodu</div>
+            <svg viewBox="0 0 380 100" style="width:100%;max-width:355px;height:auto;display:block;margin:0 auto;">
+                <line x1="25" y1="55" x2="355" y2="55" stroke="${pal.dark}" stroke-width="2.5"/>
+                <circle cx="40" cy="55" r="6" fill="${pal.accent}"/>
+                <text x="40" y="80" text-anchor="middle" fill="${pal.dark}" font-size="9.5" font-weight="bold">Başlangıç (0)</text>
+                <path d="M 40 50 Q 115 12 190 50" fill="none" stroke="${pal.accent}" stroke-width="2" stroke-dasharray="4,2"/>
+                <text x="115" y="24" text-anchor="middle" fill="${pal.accent}" font-size="10" font-weight="bold">+${n1} birim</text>
+                <path d="M 190 50 Q 265 12 340 50" fill="none" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+                <text x="265" y="24" text-anchor="middle" fill="#DC2626" font-size="10" font-weight="bold">+${n2} birim</text>
+                <circle cx="340" cy="55" r="6" fill="#DC2626"/>
+                <text x="320" y="80" text-anchor="middle" fill="#DC2626" font-size="9.5" font-weight="bold">Ortak Buluşma</text>
+            </svg>
+        </div>`;
+    }
+
+    // 2. Kareköklü, Üslü, Denklem, Fonksiyon, Türev, İntegral, Polinom ve Sayısal Matematik Soruları
+    if (low.includes("karekök") || low.includes("√") || low.includes("üslü") || low.includes("denklem") || low.includes("fonksiyon") || low.includes("türev") || low.includes("integral") || low.includes("polinom") || low.includes("logaritma") || low.includes("dizi") || low.includes("olasılık") || low.includes("matematik")) {
+        const mathSnippet = cleanQ.length > 58 ? cleanQ.substring(0, 58) + "..." : cleanQ;
+        return `
+        <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
+            <div style="font-size:0.71rem;font-weight:800;color:${pal.dark};margin-bottom:4px;">📊 [${examYear} Soru #${qIndex + 1} Matematiksel Modelleme] — ${shortTopic}</div>
+            <svg viewBox="0 0 380 105" style="width:100%;max-width:355px;height:auto;display:block;margin:0 auto;">
+                <rect x="14" y="12" width="352" height="80" rx="10" fill="#FFFFFF" stroke="${pal.accent}" stroke-width="2"/>
+                <rect x="24" y="22" width="95" height="60" rx="8" fill="${pal.soft}"/>
+                <text x="71" y="45" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">Soru Verileri</text>
+                <text x="71" y="66" text-anchor="middle" fill="${pal.accent}" font-size="12" font-weight="bold">${n1} • ${n2}</text>
+                <line x1="132" y1="22" x2="132" y2="82" stroke="${pal.border}" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <text x="248" y="42" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">${shortTopic} Kazanım Modeli</text>
+                <text x="248" y="64" text-anchor="middle" fill="#334155" font-size="9.2">${mathSnippet.replace(/[<>&"]/g, "")}</text>
+            </svg>
+        </div>`;
+    }
+
+    // 3. Fen Bilimleri, Fizik, Kimya, Biyoloji Deney / Gözlem / Düzenek Soruları
+    if (low.includes("fen") || low.includes("fizik") || low.includes("kimya") || low.includes("biyoloji") || low.includes("basınç") || low.includes("kuvvet") || low.includes("elektrik") || low.includes("dna") || low.includes("hücre") || low.includes("mevsim") || low.includes("asit")) {
+        const snippet = cleanQ.length > 56 ? cleanQ.substring(0, 56) + "..." : cleanQ;
+        return `
+        <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
+            <div style="font-size:0.71rem;font-weight:800;color:${pal.dark};margin-bottom:4px;">🔬 [${examYear} Soru #${qIndex + 1} Deney & Gözlem Kartı] — ${shortTopic}</div>
+            <svg viewBox="0 0 380 105" style="width:100%;max-width:355px;height:auto;display:block;margin:0 auto;">
+                <rect x="14" y="12" width="352" height="80" rx="10" fill="#FFFFFF" stroke="${pal.accent}" stroke-width="2"/>
+                <circle cx="58" cy="52" r="24" fill="${pal.soft}" stroke="${pal.accent}" stroke-width="2"/>
+                <text x="58" y="49" text-anchor="middle" fill="${pal.dark}" font-size="9.5" font-weight="bold">Düzenek</text>
+                <text x="58" y="63" text-anchor="middle" fill="${pal.accent}" font-size="10.5" font-weight="bold">#${qIndex + 1}</text>
+                <text x="225" y="42" text-anchor="middle" fill="${pal.dark}" font-size="10" font-weight="bold">${shortTopic} (${examYear})</text>
+                <text x="225" y="64" text-anchor="middle" fill="#334155" font-size="9.2">${snippet.replace(/[<>&"]/g, "")}</text>
+            </svg>
+        </div>`;
+    }
+
+    // 4. Sözel Dersler (Türkçe, Edebiyat, Tarih, İnkılap, Coğrafya, Felsefe, Din, İngilizce):
+    // Sözel çıkmış sorularda her sorunun altında aynı kutu resminin çıkması öğrenciyi yanılttığı için
+    // sözel sorularda tekrarlayan resim basmıyoruz; soru metni gerçek sınav kitapçığı gibi temiz görünür.
+    return "";
+}
 function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex = 0) {
     const s = String(subjectName || "").toLocaleLowerCase("tr-TR");
     const rawT = String(topicName || subjectName).replace(/^\d+\.\s*ünite\s*:\s*/i, "").trim();
@@ -4909,7 +5028,6 @@ function buildFiltered10YrPastQuestions(examType, subjectName, topicName, filter
             }
         }
 
-        const hasVis = (idx % 2 === 0) || idx < 3;
         return {
             id: `${prof.exam_type}-${yr}-${idx + 1}`,
             exam_year: yr,
@@ -4923,7 +5041,7 @@ function buildFiltered10YrPastQuestions(examType, subjectName, topicName, filter
             outcome_description: `${cleanTopic} — ${subtopic} kazanımı`,
             source_note: `${yr} ${prof.exam_type} Kazanım Uyumlu Çıkmış Soru Tarzı Referans`,
             official_url: prof.official_source_url,
-            visual_html: hasVis ? buildQuestionVisualSvg(cleanSubject, cleanTopic, yr, idx) : "",
+            visual_html: buildUniquePerQuestionVisualSvg(cleanSubject, cleanTopic, qText, yr, idx),
             question_text: qText,
             options: qOpts,
             correct_option: qAns,
@@ -7009,7 +7127,7 @@ function buildAdaptiveGradeExamQuestions(grade, subjectName, topicObj, categoryF
             socratic_hint: pkg.exam_secret.replace(/[*`]/g, ""),
             step_by_step: qItem.solution,
             alternative_method: pkg.story_analogy.replace(/[*`]/g, ""),
-            visual_svg: pkg.visual_svg
+            visual_svg: buildUniquePerQuestionVisualSvg(subj, currentTopic.title || tTitle, qItem.q_text, 2026, i + seedNum)
         });
     }
     return questions;
@@ -7705,9 +7823,11 @@ function renderGradeTopicLearningStudio(activeTab = "learn", variantIdx = 0) {
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Yeni Sorular Üret
                     </button>
                 </div>
-                ${pkg.visual_svg}
                 ${(pkg.quiz_questions || []).map((qq, qIdx) => {
                     const qDomId = `hubG${pkg.grade}_Q${qIdx}_V${variantIdx}`;
+                    const perQuestionVis = typeof buildUniquePerQuestionVisualSvg === "function"
+                        ? buildUniquePerQuestionVisualSvg(pkg.subject_name, pkg.topic_title, qq.q_text, 2026, qIdx + variantIdx)
+                        : "";
                     const optsHtml = Object.entries(qq.options).map(([k, v]) => `
                         <button class="nx-btn nx-btn-outline" id="btn_${qDomId}_${k}"
                                 style="justify-content:flex-start;text-align:left;width:100%;margin-bottom:5px;font-size:0.79rem;"
@@ -7722,6 +7842,7 @@ function renderGradeTopicLearningStudio(activeTab = "learn", variantIdx = 0) {
                                 <span class="nx-badge nx-badge-published">Soru #${qIdx + 1} • ${pkg.topic_code}</span>
                                 <small style="color:var(--nx-primary);font-weight:800;">🌟 Doğru Cevap: +10 Yıldız</small>
                             </div>
+                            ${perQuestionVis}
                             <p style="font-size:0.82rem;font-weight:700;line-height:1.5;margin-bottom:8px;">${qq.q_text}</p>
                             <div>${optsHtml}</div>
                             <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#F5F3FF;border:1px solid #C4B5FD;padding:10px;border-radius:10px;font-size:0.78rem;white-space:pre-line;">
@@ -9390,13 +9511,16 @@ function triggerChatFollowUp(actionType) {
             </button>
         `).join("");
 
+        const perChatQuizVis = typeof buildUniquePerQuestionVisualSvg === "function"
+            ? buildUniquePerQuestionVisualSvg(pkg.subject_name, pkg.topic_title, qItem.q_text, 2026, seed)
+            : pkg.visual_svg;
         const quizCardHtml = `
             <div style="background:#FFFFFF;border:1.5px solid #8B5CF6;border-radius:12px;padding:10px;margin-top:8px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span class="nx-badge nx-badge-demo">${pkg.option_mode_label}</span>
                     <small style="color:#D97706;font-weight:800;">🌟 Doğru Cevap: +10 Yıldız</small>
                 </div>
-                ${pkg.visual_svg}
+                ${perChatQuizVis}
                 <p style="font-size:0.82rem;font-weight:700;margin-bottom:8px;color:#1E1B4B;">${qItem.q_text}</p>
                 <div>${optsHtml}</div>
                 <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#F5F3FF;border:1px solid #C4B5FD;padding:9px;border-radius:10px;font-size:0.77rem;white-space:pre-line;">
@@ -9636,9 +9760,11 @@ async function loadSmartExamQuestions(incrementVariant = false) {
             </div>
         `).join("");
 
-        const visualSvgHtml = q.visual_svg || (typeof buildElementaryOrGradeVisualSvg === "function"
-            ? buildElementaryOrGradeVisualSvg(g, subj, q.topic_title || "", idx)
-            : "");
+        const visualSvgHtml = (q.visual_svg !== undefined)
+            ? q.visual_svg
+            : (typeof buildUniquePerQuestionVisualSvg === "function"
+                ? buildUniquePerQuestionVisualSvg(subj, q.topic_title || "", q.question_text || "", 2026, idx)
+                : "");
 
         qDiv.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
@@ -11706,8 +11832,8 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                 </button>
             `).join("");
 
-            const defaultVisualHtml = typeof buildQuestionVisualSvg === "function"
-                ? buildQuestionVisualSvg(subjectName, topicName, 2026, variantIndex)
+            const defaultVisualHtml = typeof buildUniquePerQuestionVisualSvg === "function"
+                ? buildUniquePerQuestionVisualSvg(subjectName, topicName, pr.question_text, 2026, variantIndex)
                 : "";
 
             questionsListHtml = `
@@ -11991,8 +12117,8 @@ async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
                 subtopic_name: q.subtopic_name,
                 difficulty_level: q.difficulty_level,
                 question_type: `${q.question_type} (${q.generation_mode})`,
-                visual_html: typeof buildQuestionVisualSvg === "function"
-                    ? buildQuestionVisualSvg(subjectName, topicName, 2026 + (idx % 2), idx)
+                visual_html: typeof buildUniquePerQuestionVisualSvg === "function"
+                    ? buildUniquePerQuestionVisualSvg(subjectName, topicName, q.question_text, 2026 + (idx % 2), idx)
                     : "",
                 question_text: q.question_text,
                 options: q.options,
@@ -12024,8 +12150,8 @@ async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
                 subtopic_name: EXAM_AI_STATE.genSubtopic,
                 difficulty_level: EXAM_AI_STATE.genDifficulty,
                 question_type: EXAM_AI_STATE.genQuestionType,
-                visual_html: typeof buildQuestionVisualSvg === "function"
-                    ? buildQuestionVisualSvg(subjectName, topicName, 2026 + (cursor % 2), cursor)
+                visual_html: typeof buildUniquePerQuestionVisualSvg === "function"
+                    ? buildUniquePerQuestionVisualSvg(subjectName, topicName, pr.question_text, 2026 + (cursor % 2), cursor)
                     : "",
                 question_text: `(Özgün Soru #${qNum} • ${EXAM_AI_STATE.genDifficulty} • ${EXAM_AI_STATE.genSubtopic})\n` + pr.question_text,
                 options: pr.options,
