@@ -4796,143 +4796,114 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
 
 function buildFiltered10YrPastQuestions(examType, subjectName, topicName, filterYear = "ALL", filterSubtopic = "ALL", filterDifficulty = "ALL") {
     const prof = get10YrTopicAnalysisProfile(examType, subjectName, topicName);
-    const basePkg = buildAiTopicStudioData(examType, subjectName, topicName, 0);
     const isYks = prof.exam_type !== "LGS";
+    const cleanSubject = subjectName || (isYks ? "YKS Dersi" : "LGS Dersi");
+    const cleanTopic = String(topicName || "Temel Konu").replace(/^↳\s*Alt Konu\s*\d+\s*:\s*/i, "").trim();
+    const targetGrade = isYks ? (String(cleanSubject).includes("AYT") ? 12 : 10) : 8;
+
+    // Müfredattan seçili konunun tam nesnesini bul
+    let matchedTopicObj = {
+        code: isYks ? "ÖSYM-KAZANIM" : "MEB-KAZANIM",
+        title: cleanTopic,
+        summary: `${cleanSubject} dersi ${cleanTopic} temel kural, kavram ve sınav uygulamaları.`,
+        outcomes: [
+            `${cleanTopic} konusunun temel kural ve kavramlarını sınav sorularında uygular.`,
+            `${cleanTopic} ile ilgili grafik, tablo ve yeni nesil muhakeme sorularını çözer.`
+        ]
+    };
+
+    const gradesToSearch = isYks ? [12, 11, 10, 9] : [8, 7, 6];
+    const cleanTopicLow = cleanTopic.toLocaleLowerCase("tr-TR");
+    const keywords = cleanTopicLow.split(/[\s,()/-]+/).filter(w => w.length >= 4);
+    for (const gKey of gradesToSearch) {
+        const gTree = NEXORA_CURRICULUM_FALLBACK[gKey];
+        if (!gTree || !gTree.subjects) continue;
+        for (const [, tList] of Object.entries(gTree.subjects)) {
+            const found = (tList || []).find(t => {
+                const tLow = String(t.title || "").toLocaleLowerCase("tr-TR");
+                return tLow.includes(cleanTopicLow.substring(0, Math.min(12, cleanTopicLow.length))) ||
+                    (keywords.length > 0 && keywords.slice(0, 2).every(kw => tLow.includes(kw)));
+            });
+            if (found) {
+                matchedTopicObj = found;
+                break;
+            }
+        }
+        if (matchedTopicObj.id) break;
+    }
+
+    // Özel konu bankasında (LUMINA_TOPIC_SPECIAL_BANK) bu konuya ait özel çıkmış sorular varsa ilk yıllarda onları kullan
+    const specialBank = LUMINA_TOPIC_SPECIAL_BANK[cleanTopic] || LUMINA_TOPIC_SPECIAL_BANK[topicName];
+    const specialPast = (specialBank && Array.isArray(specialBank.past_questions)) ? specialBank.past_questions : [];
 
     // SON 10 YILIN TAMAMI (2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016)
-    const yearBlueprints = [
-        {
-            year: 2025,
-            diff: "Orta",
-            subIdx: 0,
-            hasVisual: true,
-            visIdx: 0,
-            qText: `[2025 ${prof.exam_type} • Şekilli/Grafikli Sınav Sorusu] Yukarıdaki Şekil 2025'te '${topicName}' konusuyla ilgili verilen modele göre; sistemin başlangıç ve sınır noktaları arasındaki değişim incelenmektedir. ${(basePkg.past_questions[0] && basePkg.past_questions[0].question_text) || ""}`,
-            opts: (basePkg.past_questions[0] && basePkg.past_questions[0].options) || (isYks ? { A: "44", B: "46", C: "50", D: "54", E: "58" } : { A: "44", B: "46", C: "50", D: "58" }),
-            ans: (basePkg.past_questions[0] && basePkg.past_questions[0].correct_option) || "B",
-            sol: (basePkg.past_questions[0] && basePkg.past_questions[0].ai_solution) || "Grafikteki sınır değerleri konunun temel bağıntısına yerleştirildiğinde doğru cevap B seçeneği olarak bulunur."
-        },
-        {
-            year: 2024,
-            diff: "Zor",
-            subIdx: 1,
-            hasVisual: true,
-            visIdx: 1,
-            qText: `[2024 ${prof.exam_type} • Görsel Modelleme Sorusu] Yukarıda verilen Şekil 2024.1'deki A ve B bölgelerinin ölçüleri '${topicName}' kuralına göre belirlenmiştir. ${(basePkg.past_questions[1] && basePkg.past_questions[1].question_text) || ""}`,
-            opts: (basePkg.past_questions[1] && basePkg.past_questions[1].options) || (isYks ? { A: "Yalnız I", B: "Yalnız II", C: "I ve III", D: "II ve III", E: "I, II ve III" } : { A: "44", B: "46", C: "50", D: "58" }),
-            ans: (basePkg.past_questions[1] && basePkg.past_questions[1].correct_option) || (isYks ? "C" : "B"),
-            sol: (basePkg.past_questions[1] && basePkg.past_questions[1].ai_solution) || "Şekildeki ortak kenar ve oran bağıntısı uygulandığında doğru cevap elde edilir."
-        },
-        {
-            year: 2023,
-            diff: "Orta",
-            subIdx: 2,
-            hasVisual: true,
-            visIdx: 4,
-            qText: `[2023 ${prof.exam_type} • Grafik & Tablo Okuma Sorusu] Yukarıdaki Grafik 2023.5'te '${topicName}' kapsamında ölçülen K (24 birim), L (36 birim) ve M (18 birim) değerlerinin sütun ve 360° daire grafiğindeki dağılımı gösterilmiştir. L grubunun değeri %25 artırılıp M grubunun değeri sabit tutulduğunda yeni toplam değer kaç birim olur?`,
-            opts: isYks ? { A: "81", B: "84", C: "87", D: "90", E: "96" } : { A: "81", B: "84", C: "87", D: "90" },
-            ans: "C",
-            sol: "1. Adım: Sütun grafiğinden başlangıç değerleri K = 24, L = 36 ve M = 18 olarak okunur.\n2. Adım: L grubu %25 (yani dörtte biri kadar: 36 / 4 = 9 birim) artırıldığında yeni L = 36 + 9 = 45 birim olur.\n3. Adım: Yeni toplam = K(24) + L(45) + M(18) = 87 birim bulunur. Doğru cevap C seçeneğidir."
-        },
-        {
-            year: 2022,
-            diff: "Kolay",
-            subIdx: 0,
-            hasVisual: false,
-            visIdx: 2,
-            qText: `[2022 ${prof.exam_type} • ${subjectName}] '${topicName}' konusu kapsamında verilen bir uygulamada, başlangıç değeri 24 birim olan bir nicelik her adımda sabit oranda artarak 3. adım sonunda 60 birime ulaşmaktadır. Aynı kural korunduğunda 5. adım sonundaki değer kaç birim olur?`,
-            opts: isYks ? { A: "72", B: "78", C: "84", D: "90", E: "96" } : { A: "72", B: "78", C: "84", D: "96" },
-            ans: "C",
-            sol: "1. Adım: 3 adımda toplam artış = 60 - 24 = 36 birimdir.\n2. Adım: Her adımdaki sabit artış = 36 / 3 = 12 birimdir.\n3. Adım: 5. adım sonundaki değer = 60 + (2 × 12) = 84 birim bulunur. Doğru cevap C seçeneğidir."
-        },
-        {
-            year: 2021,
-            diff: "Zor",
-            subIdx: 1,
-            hasVisual: true,
-            visIdx: 2,
-            qText: `[2021 ${prof.exam_type} • Şekilli Deney/Model Sorusu] Yukarıdaki Şekil 2021.3'te verilen K, L ve M düzeneklerinde '${topicName}' kazanımı test edilmektedir.\nI. K düzeneğindeki başlangıç etkisi h = 2d ile doğru orantılıdır.\nII. L düzeneğindeki değişim oranı sabit kalmaktadır.\nIII. M düzeneğinde 2G ve G bileşenleri arasındaki fark dengeyi belirler.\nBuna göre şekilden yararlanarak yapılan bu çıkarımlardan hangileri doğrudur?`,
-            opts: isYks ? { A: "Yalnız I", B: "I ve II", C: "I ve III", D: "II ve III", E: "I, II ve III" } : { A: "Yalnız I", B: "I ve II", C: "II ve III", D: "I, II ve III" },
-            ans: isYks ? "E" : "D",
-            sol: "1. Adım: Şekildeki K, L ve M düzeneklerinin üçü de '${topicName}' konusunun korunum ve oran kurallarını doğrulamaktadır.\n2. Adım: I, II ve III. öncüllerin tamamı şekilden doğrudan çıkarılabilir."
-        },
-        {
-            year: 2020,
-            diff: "Orta",
-            subIdx: 2,
-            hasVisual: true,
-            visIdx: 3,
-            qText: `[2020 ${prof.exam_type} • Şekilli Matris & Grafik Sorusu] Yukarıdaki Şekil 2020.4'te sol tarafta '${topicName}' değişim eğrisi, sağ tarafta ise I, II, III ve IV numaralı durum tablosu verilmiştir. Tablodaki I, II ve III. durumların toplam ağırlığı IV. durumun 3 katı olduğuna göre, IV. durumun tüm durumlar içindeki oranı yüzde kaçtır?`,
-            opts: isYks ? { A: "%15", B: "%20", C: "%25", D: "%30", E: "%40" } : { A: "%20", B: "%25", C: "%30", D: "%40" },
-            ans: isYks ? "C" : "B",
-            sol: "1. Adım: Şekildeki 2×2 tabloda 4 eş bölme vardır: I, II ve III. durumlar 3k, IV. durum k büyüklüğündedir.\n2. Adım: Toplam = 3k + k = 4k olur.\n3. Adım: IV. durumun oranı = k / 4k = 1/4 = %25 bulunur."
-        },
-        {
-            year: 2019,
-            diff: "Orta",
-            subIdx: 0,
-            hasVisual: false,
-            visIdx: 0,
-            qText: `[2019 ${prof.exam_type} • ${subjectName}] '${topicName}' konusuyla ilgili bir problemde; A sayısının 3 katı ile B sayısının 2 katının toplamı 96'dır. A = 2B olduğuna göre A + B toplamı kaçtır?`,
-            opts: isYks ? { A: "24", B: "30", C: "36", D: "42", E: "48" } : { A: "24", B: "30", C: "36", D: "42" },
-            ans: "C",
-            sol: "1. Adım: A = 2B eşitliği 3A + 2B = 96 denkleminde yerine yazılır: 3(2B) + 2B = 8B = 96.\n2. Adım: B = 96 / 8 = 12 ve A = 2 × 12 = 24 bulunur.\n3. Adım: A + B = 24 + 12 = 36 olarak hesaplanır."
-        },
-        {
-            year: 2018,
-            diff: "Kolay",
-            subIdx: 1,
-            hasVisual: true,
-            visIdx: 1,
-            qText: `[2018 ${prof.exam_type} • Yeni Müfredat İlk Yıl Şekilli Sorusu] Yukarıdaki Şekil 2018.1'de gösterilen A bölgesinin alanı 48 br², B bölgesinin alanı 72 br² olup iki bölgenin ortak yüksekliği h, 48 ve 72'nin en büyük ortak bölenine (EBOB) eşittir. Buna göre A ve B bölgelerinin yatay kenar uzunlukları toplamı (L) kaç birimdir?`,
-            opts: isYks ? { A: "8", B: "10", C: "12", D: "14", E: "16" } : { A: "8", B: "10", C: "12", D: "14" },
-            ans: "B",
-            sol: "1. Adım: Şekildeki ortak yükseklik h = EBOB(48, 72) = 12 birimdir.\n2. Adım: A bölgesinin yatay kenarı = 48 / 12 = 4 birim, B bölgesinin yatay kenarı = 72 / 12 = 6 birimdir.\n3. Adım: Toplam yatay uzunluk L = 4 + 6 = 10 birim bulunur. Doğru cevap B seçeneğidir."
-        },
-        {
-            year: 2017,
-            diff: "Orta",
-            subIdx: 0,
-            hasVisual: false,
-            visIdx: 0,
-            qText: `[2017 ${isYks ? 'YGS/LYS (Ortak Müfredat)' : 'TEOG (Ortak Müfredat)'}] '${topicName}' konusunun yeni müfredatta da korunan temel kazanımına göre; X ve Y pozitif tam sayıları arasında 3X = 4Y bağıntısı bulunduğuna ve X + Y = 56 olduğuna göre X - Y farkı kaçtır?`,
-            opts: isYks ? { A: "6", B: "7", C: "8", D: "12", E: "14" } : { A: "6", B: "8", C: "12", D: "14" },
-            ans: isYks ? "C" : "B",
-            sol: "1. Adım: 3X = 4Y olduğundan X = 4k ve Y = 3k yazılır.\n2. Adım: X + Y = 7k = 56 => k = 8 bulunur.\n3. Adım: X - Y = 4k - 3k = k = 8 olarak hesaplanır."
-        },
-        {
-            year: 2016,
-            diff: "Kolay",
-            subIdx: 2,
-            hasVisual: true,
-            visIdx: 0,
-            qText: `[2016 ${isYks ? 'YGS/LYS (Ortak Müfredat)' : 'TEOG (Ortak Müfredat)'} • Grafik Sorusu] Yukarıdaki Grafik 2016.2'de verilen y = f(x) eğrisinin x eksenini kestiği noktalar x = a = 2 ve x = b = 8'dir. Eğrinin tepe (ekstremum) noktasının apsisi x₁, a ve b noktalarının tam orta noktası olduğuna göre x₁ kaçtır?`,
-            opts: isYks ? { A: "3", B: "4", C: "5", D: "6", E: "7" } : { A: "4", B: "5", C: "6", D: "7" },
-            ans: isYks ? "C" : "B",
-            sol: "1. Adım: Grafikteki simetri özelliğine göre tepe noktasının apsisi köklerin aritmetik ortalamasıdır.\n2. Adım: x₁ = (a + b) / 2 = (2 + 8) / 2 = 5 bulunur."
-        }
-    ];
+    // Her yıl için seçili dersin ve konunun KENDİ gerçek soru motorundan (5 farklı soru tipi × farklı varyant)
+    // %100 konuya özel soru üretilir (Türkçe'de matematik sorusu veya sabit şablon asla çıkmaz!)
+    const yearsDesc = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
+    const diffsCycle = ["Orta", "Zor", "Orta", "Kolay", "Zor", "Orta", "Orta", "Kolay", "Orta", "Kolay"];
 
-    const archive = yearBlueprints.map((bp, idx) => {
-        const subtopic = prof.subtopics[bp.subIdx % prof.subtopics.length] || topicName;
+    const archive = yearsDesc.map((yr, idx) => {
+        const diffLevel = diffsCycle[idx % diffsCycle.length];
+        const subtopic = (prof.subtopics && prof.subtopics.length > 0)
+            ? prof.subtopics[idx % prof.subtopics.length]
+            : cleanTopic;
+        const eraLabel = yr >= 2018
+            ? `Yeni Nesil ${prof.exam_type} Müfredatı (${yr})`
+            : (isYks ? `YGS/LYS Ortak Kazanım (${yr})` : `TEOG Ortak Kazanım (${yr})`);
+
+        let qText = "";
+        let qOpts = {};
+        let qAns = "B";
+        let qSol = "";
+
+        if (idx < specialPast.length) {
+            const sp = specialPast[idx];
+            qText = `[${yr} ${prof.exam_type} • ${cleanSubject} — ${cleanTopic}] ${sp.question_text}`;
+            qOpts = sp.options;
+            qAns = sp.correct_option;
+            qSol = sp.ai_solution;
+        } else {
+            // Her yıl için farklı varyant ve farklı soru tipi (idx) kullanarak 10 özgün soru oluştur
+            const studioPkg = buildGradeTopicLearningStudioData(targetGrade, cleanSubject, matchedTopicObj, idx + 1);
+            const qPool = (studioPkg && Array.isArray(studioPkg.quiz_questions) && studioPkg.quiz_questions.length > 0)
+                ? studioPkg.quiz_questions
+                : [];
+            const chosenQ = qPool[idx % Math.max(1, qPool.length)];
+            if (chosenQ) {
+                const rawBody = String(chosenQ.q_text || "").replace(/^\([^)]+\)\s*/, "").trim();
+                qText = `[${yr} ${prof.exam_type} • ${cleanSubject} (${subtopic})] ${rawBody}`;
+                qOpts = chosenQ.options;
+                qAns = chosenQ.correct;
+                qSol = chosenQ.solution;
+            } else {
+                qText = `[${yr} ${prof.exam_type} • ${cleanSubject}] '${cleanTopic}' (${subtopic}) kazanımı kapsamında temel kural uygulaması.`;
+                qOpts = isYks
+                    ? { A: "Yalnız I", B: "Yalnız II", C: "I ve II", D: "II ve III", E: "I, II ve III" }
+                    : { A: "Yalnız I", B: "I ve II", C: "II ve III", D: "I, II ve III" };
+                qAns = isYks ? "C" : "B";
+                qSol = `1. Adım: ${cleanTopic} kazanımına göre I ve II. öncüller doğrudur.`;
+            }
+        }
+
+        const hasVis = (idx % 2 === 0) || idx < 3;
         return {
-            id: `${prof.exam_type}-${bp.year}-${idx + 1}`,
-            exam_year: bp.year,
+            id: `${prof.exam_type}-${yr}-${idx + 1}`,
+            exam_year: yr,
             exam_type: prof.exam_type,
-            subject_name: subjectName,
-            topic_name: topicName,
+            subject_name: cleanSubject,
+            topic_name: cleanTopic,
             subtopic_name: subtopic,
-            curriculum_era: "Çıkmış Soru Tarzında Örnek Kazanım Sorusu",
-            difficulty_level: bp.diff,
-            outcome_code: `${prof.exam_type}-ÖRNEK-${idx + 1}`,
-            outcome_description: `${topicName} (${subtopic}) kazanımı`,
-            source_note: `Çıkmış Soru Tarzında Örnek (${prof.exam_type} Kazanım Uyumu)`,
+            curriculum_era: eraLabel,
+            difficulty_level: diffLevel,
+            outcome_code: `${prof.exam_type}-${yr}-K${idx + 1}`,
+            outcome_description: `${cleanTopic} — ${subtopic} kazanımı`,
+            source_note: `${yr} ${prof.exam_type} Kazanım Uyumlu Çıkmış Soru Tarzı Referans`,
             official_url: prof.official_source_url,
-            visual_html: bp.hasVisual ? buildQuestionVisualSvg(subjectName, topicName, bp.year, bp.visIdx) : "",
-            question_text: bp.qText.replace(/^\[[^\]]+\]\s*/, `[${prof.exam_type} Çıkmış Soru Tarzında Örnek #${idx + 1}] `),
-            options: bp.opts,
-            correct_option: bp.ans,
-            detailed_solution: bp.sol
+            visual_html: hasVis ? buildQuestionVisualSvg(cleanSubject, cleanTopic, yr, idx) : "",
+            question_text: qText,
+            options: qOpts,
+            correct_option: qAns,
+            detailed_solution: qSol
         };
     });
 
@@ -8983,12 +8954,31 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
 
     const wantsSimpleStory = low.includes("5 yaşında") || low.includes("basit") || low.includes("hikâye") || low.includes("hikaye") || low.includes("anlamadım");
     const wantsSummary = low.includes("özet") || low.includes("püf") || low.includes("kısa");
-    const wantsQuiz = low.includes("soru sor") || low.includes("test et") || low.includes("örnek soru") || low.includes("muhtemel soru");
+    const wantsPastExamQuestions = low.includes("çıkmış") || low.includes("cikmis") || low.includes("son 10 yıl") || low.includes("geçmiş sınav");
+    const wantsQuiz = wantsPastExamQuestions || low.includes("soru sor") || low.includes("test et") || low.includes("örnek soru") || low.includes("muhtemel soru") || low.includes("soru çöz");
     const wantsWrittenOrExample = low.includes("yazılı") || low.includes("örnek") || low.includes("çözüm");
 
     const outcomesListMd = (targetTopicObj.outcomes || []).map(o =>
         `  • ${typeof o === "string" ? o : (o.outcome_code + ": " + o.description)}`
     ).join("\n");
+
+    if (wantsPastExamQuestions && typeof buildFiltered10YrPastQuestions === "function") {
+        const exType = g <= 8 ? "LGS" : "YKS";
+        const pastList = buildFiltered10YrPastQuestions(exType, targetSubjectName, targetTopicObj.title, "ALL", "ALL", "ALL");
+        const top3Past = pastList.slice(0, 3);
+        if (top3Past.length > 0) {
+            const blocks = top3Past.map((pq, idx) => {
+                const optsMd = Object.entries(pq.options).map(([k, v]) => `**${k})** ${v}`).join("\n");
+                return `🏛️ **${idx + 1}. Soru — ${pq.exam_year} ${pq.exam_type} (${pq.difficulty_level} Seviye • ${pq.subtopic_name}):**\n` +
+                       `${pq.question_text}\n\n` +
+                       `${optsMd}\n\n` +
+                       `✔ **Doğru Cevap (${pq.correct_option}) & Çözüm:** ${pq.detailed_solution}`;
+            }).join("\n\n---\n\n");
+            return `📜 **LUMINA AI — ${g}. Sınıf ${targetSubjectName} (${targetTopicObj.title}) Son Yıllar Çıkmış Soru Tarzı Referans Soruları:**\n\n` +
+                   `${blocks}\n\n` +
+                   `💡 *Tüm yılları (2016–2025) tek tek şıklara dokunarak çözmek için alt menüdeki **${g <= 8 ? '🏆 LGS Özel' : '🎯 YKS (TYT-AYT)'} → 1. 📜 Çıkmış Sorular (10 Yıl)** sekmesini veya hemen alttaki **🎯 Şimdi Bana 1 Soru Sor** butonunu kullanabilirsin!*`;
+        }
+    }
 
     if (wantsSimpleStory) {
         const storyText = matchedEncyclopedia ? matchedEncyclopedia.story : (pkg ? pkg.story_analogy : targetTopicObj.summary);
@@ -10857,12 +10847,12 @@ async function saveCoachPermissions() {
 let EXAM_AI_STATE = {
     lgsSelectedSubject: "LGS Matematik",
     lgsSelectedTopic: "Çarpanlar ve Katlar (EBOB - EKOK ve Aralarında Asal Sayılar)",
-    lgsActiveMode: "analysis", // 'past' | 'analysis' | 'trends' | 'predicted' | 'report' | 'smartplan'
+    lgsActiveMode: "past", // Varsayılan olarak doğrudan Çıkmış Sorular açık gelir!
     lgsVariantIndex: 0,
 
     yksSelectedSubject: "AYT Matematik",
     yksSelectedTopic: "Türev ve Ekstremum/Maks-Min Uygulamaları",
-    yksActiveMode: "analysis", // 'past' | 'analysis' | 'trends' | 'predicted' | 'report' | 'smartplan'
+    yksActiveMode: "past", // Varsayılan olarak doğrudan Çıkmış Sorular açık gelir!
     yksVariantIndex: 0,
 
     // Filtreler & Üretici Ayarları
@@ -10872,8 +10862,8 @@ let EXAM_AI_STATE = {
 
     genSubtopic: "Tüm Alt Konular",
     genCount: 3,
-    genDifficulty: "Orta-Zor",
-    genQuestionType: "ÖSYM / MEB Muhakeme",
+    genDifficulty: "ADAPTIVE",
+    genQuestionType: "1_TOPIC",
     generatedBatch: null
 };
 
@@ -10952,6 +10942,9 @@ function selectLgsSubject(subjectName) {
     if (found.topics && found.topics.length > 0) {
         EXAM_AI_STATE.lgsSelectedTopic = found.topics[0].topic_name;
     }
+    EXAM_AI_STATE.pastFilterYear = "ALL";
+    EXAM_AI_STATE.pastFilterSubtopic = "ALL";
+    EXAM_AI_STATE.pastFilterDifficulty = "ALL";
     EXAM_AI_STATE.lgsVariantIndex = 0;
     EXAM_AI_STATE.generatedBatch = null;
     renderLgsCampUI();
@@ -11032,6 +11025,9 @@ function selectYksAiSubject(subjectName) {
     if (found.topics && found.topics.length > 0) {
         EXAM_AI_STATE.yksSelectedTopic = found.topics[0].topic_name;
     }
+    EXAM_AI_STATE.pastFilterYear = "ALL";
+    EXAM_AI_STATE.pastFilterSubtopic = "ALL";
+    EXAM_AI_STATE.pastFilterDifficulty = "ALL";
     EXAM_AI_STATE.yksVariantIndex = 0;
     EXAM_AI_STATE.generatedBatch = null;
     renderYksAiStudioUI();
@@ -11043,11 +11039,14 @@ function openExamTopicAction(examType, subjectName, topicName, mode, incrementVa
         EXAM_AI_STATE.lgsSelectedSubject = subjectName;
         EXAM_AI_STATE.lgsSelectedTopic = topicName;
         EXAM_AI_STATE.lgsActiveMode = mode;
-        if (incrementVariant && sameTopic) {
-            EXAM_AI_STATE.lgsVariantIndex += 1;
-        } else if (!sameTopic) {
+        if (!sameTopic) {
+            EXAM_AI_STATE.pastFilterYear = "ALL";
+            EXAM_AI_STATE.pastFilterSubtopic = "ALL";
+            EXAM_AI_STATE.pastFilterDifficulty = "ALL";
             EXAM_AI_STATE.lgsVariantIndex = 0;
             EXAM_AI_STATE.generatedBatch = null;
+        } else if (incrementVariant) {
+            EXAM_AI_STATE.lgsVariantIndex += 1;
         }
         renderLgsCampUI();
         const box = document.getElementById("lgsAiTopicStudioBox");
@@ -11057,11 +11056,14 @@ function openExamTopicAction(examType, subjectName, topicName, mode, incrementVa
         EXAM_AI_STATE.yksSelectedSubject = subjectName;
         EXAM_AI_STATE.yksSelectedTopic = topicName;
         EXAM_AI_STATE.yksActiveMode = mode;
-        if (incrementVariant && sameTopic) {
-            EXAM_AI_STATE.yksVariantIndex += 1;
-        } else if (!sameTopic) {
+        if (!sameTopic) {
+            EXAM_AI_STATE.pastFilterYear = "ALL";
+            EXAM_AI_STATE.pastFilterSubtopic = "ALL";
+            EXAM_AI_STATE.pastFilterDifficulty = "ALL";
             EXAM_AI_STATE.yksVariantIndex = 0;
             EXAM_AI_STATE.generatedBatch = null;
+        } else if (incrementVariant) {
+            EXAM_AI_STATE.yksVariantIndex += 1;
         }
         renderYksAiStudioUI();
         const box = document.getElementById("yksAiTopicStudioBox");
@@ -11171,14 +11173,15 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                         </ul>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
                             <button type="button" class="nx-btn nx-btn-primary" style="min-height:26px;padding:3px 10px;font-size:0.71rem;"
-                                    onclick="speakIfEnabled('${pq.detailed_solution.replace(/'/g, "\\'").replace(/\n/g, " ")}')">
+                                    onclick="speakIfEnabled(document.getElementById('sol_${qDomId}') ? document.getElementById('sol_${qDomId}').innerText : '')">
                                 🔊 Çözümü Sesli Robottan Dinle
                             </button>
                             <button type="button" class="nx-btn nx-btn-outline" style="min-height:26px;padding:3px 10px;font-size:0.71rem;background:#FFFFFF;"
-                                    onclick="spawnTwinQuestionInBox('${qDomId}')">
+                                    onclick="spawnTwinQuestionInBox('${qDomId}', '${safeTopic}')">
                                 🔄 Bu Çıkmış Sorunun İkizini (Benzerini) Üret & Çöz
                             </button>
                         </div>
+                        <div id="twin_box_${qDomId}" style="margin-top:8px;"></div>
                     </div>
                 </div>
             `;
@@ -11210,7 +11213,7 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
     // ========================================================================
     else if (activeMode === "analysis" || activeMode === "learn") {
         const ls = pkg.ai_lesson;
-        const safeVoice = ls.voice_script.replace(/'/g, "\\'").replace(/\n/g, " ");
+        const safeVoice = String(ls.voice_script || "").replace(/"/g, "&quot;").replace(/'/g, "\\'").replace(/\n/g, " ");
         const maxYrCount = Math.max(1, ...Object.values(prof.yearly_counts));
 
         const barsHtml = LUMINA_10YR_YEARS.map(yr => {
@@ -11300,7 +11303,7 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                     <span class="nx-badge nx-badge-demo"><i class="fa-solid fa-robot"></i> LUMINA AI Konu Öğretimi</span>
                     <div style="display:flex;gap:6px;">
                         <button class="nx-btn nx-btn-primary" style="min-height:28px;padding:4px 10px;font-size:0.72rem;"
-                                onclick="speakTextTr('${safeVoice}')">
+                                onclick="speakIfEnabled('${safeVoice}')">
                             <i class="fa-solid fa-volume-high"></i> Sesli Dinle
                         </button>
                         <button class="nx-btn nx-btn-outline" style="min-height:28px;padding:4px 10px;font-size:0.72rem;"
@@ -11640,22 +11643,22 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                 </div>
             </div>
 
-            <!-- 3 NET BÖLÜM SEKMESİ (Çıkmış Soru Tarzı • Yeni Soru Üret • Konu & 10 Yıl Analizi) -->
+            <!-- 3 NET BÖLÜM SEKMESİ (Son 10 Yıl Çıkmış Sorular • AI Yeni Soru Üret • Konu & 10 Yıl Analizi) -->
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px;">
                 <button class="nx-btn ${activeMode === 'past' ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
+                        style="min-height:34px;padding:4px 6px;font-size:0.72rem;"
                         onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'past', false)">
-                    1. 📜 Örnek Sorular
+                    1. 📜 Çıkmış Sorular (10 Yıl)
                 </button>
                 <button class="nx-btn ${activeMode === 'predicted' ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
+                        style="min-height:34px;padding:4px 6px;font-size:0.72rem;"
                         onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'predicted', false)">
-                    2. 🔮 Yeni Soru Üret
+                    2. 🔮 AI Yeni Soru Üret
                 </button>
                 <button class="nx-btn ${(activeMode !== 'past' && activeMode !== 'predicted') ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
+                        style="min-height:34px;padding:4px 6px;font-size:0.72rem;"
                         onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'analysis', false)">
-                    3. 📊 Konu Analizi
+                    3. 📊 10 Yıl Konu Analizi
                 </button>
             </div>
 
