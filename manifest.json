@@ -1,0 +1,25 @@
+{
+  "name": "LUMINA AI — 1-12. Sınıf Akıllı Öğretmen",
+  "short_name": "LUMINA AI",
+  "description": "1. Sınıftan 12. Sınıfa Kadar Konuşan Yapay Zekâ Öğretmen, LGS & YKS Hazırlık Uygulaması",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F3E8FF",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait-primary",
+  "lang": "tr-TR",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
