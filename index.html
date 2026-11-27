@@ -4129,8 +4129,8 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         </div>`;
     }
 
-    // 1H. Analitik Geometri (Nokta, Doğru, Çember Analitiği) & Dönüşüm Geometrisi
-    if (t.includes("analitik") || t.includes("dönüşüm") || t.includes("koordinat") || t.includes("öteleme") || t.includes("simetri") || t.includes("eğim")) {
+    // 1H. Analitik Geometri (Nokta, Doğru, Çember Analitiği) & Dönüşüm Geometrisi (Fizik/Fen Konuları Hariç!)
+    if (!s.includes("fizik") && !s.includes("fen") && (t.includes("analitik") || t.includes("dönüşüm") || t.includes("koordinat") || t.includes("öteleme") || t.includes("simetri") || t.includes("eğim"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #C4B5FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#5B21B6;margin-bottom:4px;">📈 ${cleanMainTitle} — Analitik Düzlemde Nokta, Doğru (y=mx+n) ve Çember</div>
@@ -6653,7 +6653,7 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
             foundationalBasicsMd =
                 `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Başlamadan Önce Hatırlayalım)**\n` +
                 `• **Alfabemiz ve Harflerimiz:** Türk alfabesinde **29 harf** vardır (*A, B, C, Ç, D, E, F, G, Ğ, H, I, İ, J, K, L, M, N, O, Ö, P, R, S, Ş, T, U, Ü, V, Y, Z*). Bunların **8 tanesi ünlü (sesli)** harf (*a, e, ı, i, o, ö, u, ü*), **21 tanesi ünsüz (sessiz)** harftir.\n` +
-                `• **Hece, Kelime ve Cümle:** Ağzımızın bir hareketiyle çıkan sese **hece** denir. Bir kelimedeki ünlü harf sayısı kadar hece vardır (Örn: *O-KUL* → 2 ünlü harf = 2 hece). Cümleler हमेशा **büyük harfle** başlar ve sonuna uygun noktalama işareti (\`.\`, \`?\`, \`!\`) konur.`;
+                `• **Hece, Kelime ve Cümle:** Ağzımızın bir hareketiyle çıkan sese **hece** denir. Bir kelimedeki ünlü harf sayısı kadar hece vardır (Örn: *O-KUL* → 2 ünlü harf = 2 hece). Cümleler her zaman **büyük harfle** başlar ve sonuna uygun noktalama işareti (\`.\`, \`?\`, \`!\`) konur.`;
         } else if (isEng) {
             foundationalBasicsMd =
                 `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (English Basics)**\n` +
@@ -7494,10 +7494,13 @@ function renderCurriculumViews() {
     hubBox.appendChild(topicSelectWrap);
 
     // 1-12. Sınıf Etkileşimli Konu Öğrenme, MEB Ortak Yazılı & Konu Testi Stüdyosunu Konu Seçicinin Hemen Altında Render Et
-    const studioBox = document.getElementById("gradeTopicLearningStudioBox");
-    if (studioBox) {
-        hubBox.appendChild(studioBox);
+    let studioBox = document.getElementById("gradeTopicLearningStudioBox");
+    if (!studioBox) {
+        studioBox = document.createElement("div");
+        studioBox.id = "gradeTopicLearningStudioBox";
+        studioBox.style.marginBottom = "14px";
     }
+    hubBox.appendChild(studioBox);
     renderGradeTopicLearningStudio(NX_STATE.hubStudioTab || "learn", NX_STATE.hubStudioVariant || 0);
 
     const isReviewerOrAdmin = NX_STATE.currentUser && ["reviewer", "admin"].includes(NX_STATE.currentUser.account_type);
