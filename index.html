@@ -983,6 +983,21 @@ html, body {
     color: var(--nx-primary);
 }
 
+/* Gerçek Cep Telefonu Ekranında (<= 540px) Dış Çerçeveyi Kaldır ve %100 Tam Ekran Uygulama Yap */
+@media (max-width: 540px) {
+    body {
+        padding: 0;
+        align-items: stretch;
+    }
+    .mobile-phone-shell {
+        max-width: 100%;
+        min-height: 100dvh;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+}
+
 </style>
 </head>
 <body data-stage="ortaokul">
@@ -1032,7 +1047,7 @@ html, body {
                 <div class="nx-top-actions" style="gap:5px;">
                     <div id="studentStarBadgePill" title="Doğru çözdüğün her soruda +10 Yıldız kazanırsın!" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#FEF3C7 0%,#FDE68A 100%);border:1.5px solid #F59E0B;color:#92400E;padding:4px 9px;border-radius:99px;font-size:0.74rem;font-weight:800;cursor:pointer;box-shadow:0 2px 6px rgba(245,158,11,0.18);" onclick="switchNexoraModule('mind-analytics')">
                         <span>🌟</span>
-                        <span id="studentStarCount">120</span>
+                        <span id="studentStarCount">0</span>
                     </div>
                     <div class="nx-select-pill" style="padding:4px 9px;border-radius:99px;">
                         <i class="fa-solid fa-graduation-cap" style="font-size:0.75rem;"></i>
@@ -1156,8 +1171,8 @@ html, body {
                     </button>
                 </div>
 
-                <!-- Seçili Sınıf ve Derse Göre Dinamik Hızlı Soru & Sembol Şeridi (Hemen Üstte, Kaydırmasız Erişim) -->
-                <div class="nx-math-strip" id="nxDynamicQuickStrip">
+                <!-- Seçili Sınıf ve Derse Göre Dinamik Hızlı Soru & Sembol Şeridi (Ekran Sadeleştirmesi İçin Gizli) -->
+                <div class="nx-math-strip" id="nxDynamicQuickStrip" style="display:none;">
                     <button type="button" onclick="insertTutorSymbol('x')">x</button>
                     <button type="button" onclick="insertTutorSymbol('²')">x²</button>
                     <button type="button" onclick="insertTutorSymbol('√')">√</button>
@@ -1500,17 +1515,6 @@ html, body {
                  B. AKILLI SINAV (KONU, YAZILI, LGS, TYT, AYT & HATA ANALİZİ)
                  ============================================================== -->
             <section class="nx-module-pane" id="pane-smart-exam">
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
-                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('mind-analytics')">
-                        📊 Gelişimim
-                    </button>
-                    <button class="nx-btn nx-btn-primary" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('smart-exam')">
-                        📝 Akıllı Sınav
-                    </button>
-                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('study-coach')">
-                        📅 Çalışma Koçu
-                    </button>
-                </div>
                 <div class="nx-card">
                     <div class="nx-card-header">
                         <div>
@@ -1602,32 +1606,19 @@ html, body {
             </section>
 
             <!-- ==============================================================
-                 E. GELİŞİMİM (ÖĞRENME HAFIZASI, AKILLI SINAV & ÇALIŞMA KOÇU GEÇİŞİ)
+                 E. GELİŞİMİM (ÖĞRENME HAFIZASI, YANLIŞ DEFTERİM & TEKRAR PLANI)
                  ============================================================== -->
             <section class="nx-module-pane" id="pane-mind-analytics">
-                <!-- Öğrenci İçin Tek Ekranda 3'lü Basit Geçiş (Gelişimim • Akıllı Sınav • Çalışma Koçu) -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
-                    <button class="nx-btn nx-btn-primary" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('mind-analytics')">
-                        📊 Gelişimim
-                    </button>
-                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('smart-exam')">
-                        📝 Akıllı Sınav
-                    </button>
-                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('study-coach')">
-                        📅 Çalışma Koçu
-                    </button>
-                </div>
-
                 <!-- Öğrenci Rütbesi, Yıldız Seviyesi & Günlük 5 Soru Hedef Kartı -->
                 <div id="studentRankAndDailyGoalBox" style="margin-bottom:12px;"></div>
 
                 <div class="nx-card" style="margin-bottom:12px;">
                     <div class="nx-card-header">
                         <div>
-                            <h2 id="mindAnalyticsGradeHeading">Gelişim Raporum & Canlı Öğrenme Hafızası</h2>
-                            <p class="nx-subtitle">Çözdüğün her soru, ustalık oranlarını ve tekrar takvimini canlı günceller.</p>
+                            <h2 id="mindAnalyticsGradeHeading">Gelişim Raporum</h2>
+                            <p class="nx-subtitle">Çözdüğün her soru, başarı oranlarını canlı günceller.</p>
                         </div>
-                        <span class="nx-badge nx-badge-demo" id="analyticsConfidenceBadge">Güvenilir</span>
+                        <span class="nx-badge nx-badge-demo" id="analyticsConfidenceBadge">Yeni Başlangıç</span>
                     </div>
                     <div class="nx-grid-3" id="analyticsSummaryCards"></div>
                 </div>
@@ -1635,21 +1626,21 @@ html, body {
                 <div class="nx-card" style="margin-bottom:12px;">
                     <div class="nx-card-header">
                         <div>
-                            <h3 id="topicMasteryGradeHeading">Konu Bazlı Canlı Ustalık Oranlarım</h3>
-                            <p class="nx-subtitle">Seçili sınıfının müfredat konularındaki gerçek zamanlı başarı çubukların.</p>
-                        </div>
-                    </div>
-                    <div id="topicMasteryBreakdownBox"></div>
-                </div>
-
-                <div class="nx-card">
-                    <div class="nx-card-header">
-                        <div>
                             <h3>📕 Yanlış Defterim & Hata Tanı Merkezi</h3>
                             <p class="nx-subtitle">Yanlış yaptığın sorular buraya kaydedilir • Tekrar çözüp doğru yaparak defterden temizle (+15 🌟)</p>
                         </div>
                     </div>
                     <div id="mistakesDiagnosticBox"></div>
+                </div>
+
+                <div class="nx-card">
+                    <div class="nx-card-header">
+                        <div>
+                            <h3 id="topicMasteryGradeHeading">Konu Bazlı Başarı Oranlarım</h3>
+                            <p class="nx-subtitle">Seçili sınıfının müfredat konularındaki gerçek çözümlerine dayalı başarı çubukların.</p>
+                        </div>
+                    </div>
+                    <div id="topicMasteryBreakdownBox"></div>
                 </div>
             </section>
 
@@ -1761,53 +1752,35 @@ html, body {
         </nav>
     </div>
 
-    <!-- MODAL: PROFİL, VELİ / YÖNETİCİ GEÇİŞİ, KVKK VE AYARLAR -->
+    <!-- MODAL: SADE ÖĞRENCİ AYARLARI (AD, SES HIZI, GEMINI ANAHTARI VE VERİ SIFIRLAMA) -->
     <div id="accountPrivacyModal" style="display:none;position:fixed;inset:0;background:rgba(30,27,75,0.5);z-index:100;align-items:center;justify-content:center;padding:14px;">
-        <div class="nx-card" style="max-width:440px;width:100%;">
+        <div class="nx-card" style="max-width:400px;width:100%;">
             <div class="nx-card-header">
                 <div>
-                    <h3>Profil, Veli Merkezi & Ayarlar</h3>
+                    <h3>⚙️ Öğrenci Ayarları</h3>
                 </div>
                 <button class="nx-btn nx-btn-outline" style="min-height:30px;padding:3px 9px;" onclick="document.getElementById('accountPrivacyModal').style.display='none'">Kapat</button>
             </div>
             <div style="font-size:0.79rem;color:var(--nx-text-secondary);display:flex;flex-direction:column;gap:10px;">
-                <div style="background:var(--nx-surface-alt);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                <!-- 1. Öğrenci Adı ve Ses Ayarı -->
+                <div style="background:#F8F7FF;border:1px solid #DDD6FE;padding:10px;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
                     <div>
-                        <strong>Aktif Kullanıcı:</strong> <span id="modalActiveUserName">[DEMO] Deniz Yılmaz</span> (<span id="modalActiveUserRole">student</span>)
+                        <label style="font-weight:700;display:block;margin-bottom:3px;">👤 Öğrenci Adın:</label>
+                        <input type="text" id="studentCustomNameInput" class="nx-btn nx-btn-outline" style="width:100%;background:#FFFFFF;justify-content:flex-start;" placeholder="Adını yaz..." onchange="localStorage.setItem('lumina_student_custom_name', this.value.trim())">
                     </div>
-                    <div class="nx-quota-badge">
-                        <span class="nx-plan-badge" id="activePlanBadge">PLUS</span>
-                        <span id="quotaSummaryText">3/150</span>
-                    </div>
-                </div>
-
-                <!-- Rol Değiştirici ve Veli / Uzman / Yönetim Ekranları (Öğrenci ana ekranını kalabalıklaştırmamak için burada) -->
-                <div style="background:#F8F7FF;border:1px solid #DDD6FE;padding:10px;border-radius:10px;">
-                    <label style="font-weight:700;display:block;margin-bottom:5px;">Hesap Rolü & Yönetim Panelleri:</label>
-                    <select id="accountRoleSwitcher" class="nx-btn nx-btn-outline" style="width:100%;margin-bottom:8px;" onchange="onRoleSwitchChange()" aria-label="Kullanıcı Rolü">
-                        <option value="ogrenci@nexora.demo">Öğrenci Hesabı (PLUS)</option>
-                        <option value="lise@nexora.demo">Öğrenci Hesabı (FREE)</option>
-                        <option value="veli@nexora.demo">Veli Hesabı (FAMILY)</option>
-                        <option value="uzman@nexora.demo">Akademik İçerik Uzmanı</option>
-                        <option value="admin@nexora.demo">Sistem Yöneticisi (Admin)</option>
-                    </select>
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-                        <button class="nx-btn nx-btn-outline" style="min-height:32px;font-size:0.72rem;" onclick="document.getElementById('accountPrivacyModal').style.display='none';switchNexoraModule('parent-hub');">
-                            👨‍👩‍👧 Veli Merkezi
-                        </button>
-                        <button class="nx-btn nx-btn-outline" style="min-height:32px;font-size:0.72rem;" onclick="document.getElementById('accountPrivacyModal').style.display='none';switchNexoraModule('content-studio');">
-                            ✍️ Uzman Onayı
-                        </button>
-                        <button class="nx-btn nx-btn-outline" style="min-height:32px;font-size:0.72rem;" onclick="document.getElementById('accountPrivacyModal').style.display='none';switchNexoraModule('admin-center');">
-                            🛡️ Yönetim
-                        </button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                        <span style="font-weight:700;">🔊 Sesli Okuma & Hız:</span>
+                        <div style="display:flex;gap:5px;">
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="toggleAutoSpeak()">Ses Aç/Kapa</button>
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="cycleTtsSpeed()">Hız Değiştir</button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Canlı Google Gemini Yapay Zekâ Bağlantısı (İsteğe Bağlı) -->
+                <!-- 2. Canlı Google Gemini Yapay Zekâ & Kamera Bağlantısı -->
                 <div style="background:#ECFDF5;border:1px solid #A7F3D0;padding:10px;border-radius:10px;color:#065F46;">
-                    <label style="font-weight:700;display:block;margin-bottom:4px;"><i class="fa-solid fa-bolt"></i> Canlı Google Gemini AI Anahtarı (İsteğe Bağlı):</label>
-                    <p style="font-size:0.71rem;margin-bottom:6px;">Anahtar girmezseniz <strong>Lumina Yerleşik Akıllı Öğretmen & Matematik Çözücü Motoru</strong> çalışır. Canlı Gemini 2.5 Flash modeli için ücretsiz API anahtarınızı girebilirsiniz:</p>
+                    <label style="font-weight:700;display:block;margin-bottom:4px;"><i class="fa-solid fa-bolt"></i> Canlı Yapay Zekâ & Kamera Anahtarı:</label>
+                    <p style="font-size:0.71rem;margin-bottom:6px;">Fotoğraftan soru çözümü ve serbest sohbet için ücretsiz Gemini API anahtarını buraya kaydedebilirsin:</p>
                     <div style="display:flex;gap:6px;">
                         <input type="password" id="geminiApiKeyInput" class="nx-btn nx-btn-outline" style="flex:1;background:#FFFFFF;font-size:0.74rem;" placeholder="AIzaSy... (Gemini API Key)">
                         <button class="nx-btn nx-btn-primary" style="min-height:32px;padding:4px 10px;font-size:0.73rem;" onclick="saveCustomGeminiApiKey()">Kaydet</button>
@@ -1815,19 +1788,21 @@ html, body {
                     <small id="geminiKeyStatusText" style="display:block;margin-top:4px;font-weight:700;"></small>
                 </div>
 
-                <div style="background:#FFFBEB;border:1px solid #FDE68A;padding:10px;border-radius:10px;color:#92400E;">
-                    <strong><i class="fa-solid fa-shield-heart"></i> Çocuk Gizliliği & KVKK İlkeleri:</strong>
-                    <ul style="padding-left:16px;margin-top:4px;">
-                        <li>18 yaş altı öğrenci hesaplarında Veli Açık Rıza Onayı zorunludur.</li>
-                        <li>Yüklenen ödev fotoğrafları ve ses kayıtları kalıcı depolanmaz.</li>
-                        <li>Öğrenciler başka öğrencilerin verilerini asla göremez (RLS).</li>
-                    </ul>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;">
-                    <span>Hesabımı ve Verilerimi Kalıcı Sil:</span>
-                    <button class="nx-btn nx-btn-danger" onclick="requestAccountDeletion()">
-                        <i class="fa-solid fa-trash-can"></i> Hesabı Sil
+                <!-- 3. Çalışma Verilerini Sıfırla -->
+                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:2px;">
+                    <span>Yıldız ve Soru İstatistiklerim:</span>
+                    <button class="nx-btn nx-btn-danger" style="min-height:28px;font-size:0.72rem;" onclick="localStorage.removeItem('lumina_live_student_stats_v3');localStorage.setItem('lumina_student_stars_v3','0');document.getElementById('studentStarCount').textContent='0';loadMindAnalyticsAndCoach();document.getElementById('accountPrivacyModal').style.display='none';">
+                        🔄 Sıfırdan Başla
                     </button>
+                </div>
+
+                <!-- Arka plan JS uyumluluğu için gizli tutulan elemanlar -->
+                <div style="display:none;">
+                    <span id="modalActiveUserName">Öğrenci</span>
+                    <span id="modalActiveUserRole">student</span>
+                    <span id="activePlanBadge">PLUS</span>
+                    <span id="quotaSummaryText"></span>
+                    <select id="accountRoleSwitcher"></select>
                 </div>
             </div>
         </div>
@@ -3613,7 +3588,7 @@ function get10YrTopicAnalysisProfile(examType, subjectName, topicName) {
         trend_reasoning: `Son 10 yılda toplam ${total10} soru (son 5 yılda ${last5} soru, son 3 yılda ${last3} soru) sorulmuştur. Müfredattaki kazanım ağırlığı ve soru tiplerinin tekrar sıklığı nedeniyle '${trendLevel}' kategorisinde değerlendirilmiştir.`,
         student_mastery_pct: masteryPct,
         official_source_url: isYks ? "https://www.osym.gov.tr" : "https://odsgm.meb.gov.tr",
-        official_source_label: isYks ? "ÖSYM Resmî YKS (TYT-AYT) Soru Kitapçıkları Arşivi" : "MEB ODSGM Resmî LGS Çıkmış Soru Kitapçıkları Arşivi"
+        official_source_label: isYks ? "ÖSYM YKS (TYT-AYT) Çıkmış Soru Tarzı Kazanım Havuzu" : "MEB LGS Çıkmış Soru Tarzı Kazanım Havuzu"
     };
 }
 
@@ -3622,13 +3597,17 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     const t = String(topicName || "").toLocaleLowerCase("tr-TR");
     const isVerbalOrSocial = s.includes("türkçe") || s.includes("edebiyat") || s.includes("tarih") || s.includes("inkılap") || s.includes("sosyal") || s.includes("coğrafya") || s.includes("ingilizce") || s.includes("din") || s.includes("felsefe") || s.includes("hayat");
 
-    // 0. SÖZEL / DİL / SOSYAL BİLİMLER KAVRAM & METİN ANALİZ ŞEMASI (Matematik y=f(x) grafiği yerine!)
+    // 0. SÖZEL / DİL / SOSYAL BİLİMLER KAVRAM & METİN ANALİZ ŞEMASI (Konunun Kendi Alt Başlıklarıyla!)
     if (isVerbalOrSocial) {
-        const cleanMainTitle = String(topicName || subjectName)
-            .replace(/^\d+\.\s*ünite\s*:\s*/i, "")
-            .split("(")[0]
-            .split("—")[0]
-            .trim();
+        const rawT = String(topicName || subjectName).replace(/^\d+\.\s*ünite\s*:\s*/i, "").trim();
+        const parenMatch = rawT.match(/\(([^)]+)\)/);
+        const subParts = parenMatch
+            ? parenMatch[1].split(/[,;/]+/).map(x => x.trim()).filter(Boolean)
+            : rawT.split(/[,;—/-]+/).map(x => x.trim()).filter(Boolean);
+        const b1 = (subParts[0] || "Ana Kavram").substring(0, 18);
+        const b2 = (subParts[1] || "Metin & Bağlam").substring(0, 18);
+        const b3 = (subParts[2] || "Örnek Uygulama").substring(0, 18);
+        const cleanMainTitle = rawT.split("(")[0].split("—")[0].trim();
         let boxLabel = cleanMainTitle;
         if (boxLabel.length > 34) {
             boxLabel = boxLabel.split(",")[0].split(" ve ")[0].trim();
@@ -3638,7 +3617,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         }
         return `
         <div style="background:#FFFFFF;border:1.5px solid #C4B5FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
-            <div style="font-size:0.72rem;font-weight:800;color:#5B21B6;margin-bottom:4px;">📖 ${subjectName} — "${cleanMainTitle}" Kavram ve Bağlam Haritası</div>
+            <div style="font-size:0.72rem;font-weight:800;color:#5B21B6;margin-bottom:4px;">📖 ${subjectName} — "${cleanMainTitle}" Konu Özeti Şeması</div>
             <svg viewBox="0 0 380 125" style="width:100%;max-width:360px;height:auto;display:block;margin:0 auto;">
                 <rect x="25" y="10" width="330" height="32" rx="16" fill="#7C3AED"/>
                 <text x="190" y="30" text-anchor="middle" fill="#FFFFFF" font-size="10.2" font-weight="bold">${boxLabel}</text>
@@ -3646,14 +3625,14 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
                 <line x1="190" y1="42" x2="190" y2="72" stroke="#7C3AED" stroke-width="2"/>
                 <line x1="235" y1="42" x2="312" y2="72" stroke="#7C3AED" stroke-width="2"/>
                 <rect x="12" y="72" width="112" height="40" rx="8" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="2"/>
-                <text x="68" y="90" text-anchor="middle" fill="#4C1D95" font-size="9.5" font-weight="bold">1. Temel Kural</text>
-                <text x="68" y="103" text-anchor="middle" fill="#6D28D9" font-size="8.5">Kavram &amp; Yapı</text>
+                <text x="68" y="90" text-anchor="middle" fill="#4C1D95" font-size="9.2" font-weight="bold">1. ${b1}</text>
+                <text x="68" y="103" text-anchor="middle" fill="#6D28D9" font-size="8.2">Tanım &amp; Özellik</text>
                 <rect x="134" y="72" width="112" height="40" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
-                <text x="190" y="90" text-anchor="middle" fill="#065F46" font-size="9.5" font-weight="bold">2. Bağlam &amp; Kanıt</text>
-                <text x="190" y="103" text-anchor="middle" fill="#047857" font-size="8.5">Neden - Sonuç</text>
+                <text x="190" y="90" text-anchor="middle" fill="#065F46" font-size="9.2" font-weight="bold">2. ${b2}</text>
+                <text x="190" y="103" text-anchor="middle" fill="#047857" font-size="8.2">Örnek &amp; Kanıt</text>
                 <rect x="256" y="72" width="112" height="40" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2"/>
-                <text x="312" y="90" text-anchor="middle" fill="#78350F" font-size="9.5" font-weight="bold">3. Sınav Odağı</text>
-                <text x="312" y="103" text-anchor="middle" fill="#B45309" font-size="8.5">Çeldirici Eleme</text>
+                <text x="312" y="90" text-anchor="middle" fill="#78350F" font-size="9.2" font-weight="bold">3. ${b3}</text>
+                <text x="312" y="103" text-anchor="middle" fill="#B45309" font-size="8.2">Soru Çözüm İpucu</text>
             </svg>
         </div>`;
     }
@@ -3930,14 +3909,14 @@ function buildFiltered10YrPastQuestions(examType, subjectName, topicName, filter
             subject_name: subjectName,
             topic_name: topicName,
             subtopic_name: subtopic,
-            curriculum_era: bp.year >= 2018 ? "YENİ MÜFREDAT (2018–2025)" : "ESKİ MÜFREDAT (2016–2017 Ortak Kazanım)",
+            curriculum_era: "Çıkmış Soru Tarzında Örnek Kazanım Sorusu",
             difficulty_level: bp.diff,
-            outcome_code: `${prof.exam_type}-${bp.year}-K${idx + 1}`,
+            outcome_code: `${prof.exam_type}-ÖRNEK-${idx + 1}`,
             outcome_description: `${topicName} (${subtopic}) kazanımı`,
-            source_note: `${prof.official_source_label} (${bp.year} Sınav Analizi)`,
+            source_note: `Çıkmış Soru Tarzında Örnek (${prof.exam_type} Kazanım Uyumu)`,
             official_url: prof.official_source_url,
             visual_html: bp.hasVisual ? buildQuestionVisualSvg(subjectName, topicName, bp.year, bp.visIdx) : "",
-            question_text: bp.qText,
+            question_text: bp.qText.replace(/^\[[^\]]+\]\s*/, `[${prof.exam_type} Çıkmış Soru Tarzında Örnek #${idx + 1}] `),
             options: bp.opts,
             correct_option: bp.ans,
             detailed_solution: bp.sol
@@ -5328,10 +5307,13 @@ function registerNexoraServiceWorker() {
         }).catch(() => {});
     }
     if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
-        navigator.serviceWorker.register("/static/sw.js?v=3.1").then((reg) => {
+        navigator.serviceWorker.register("./sw.js?v=2026.13").then((reg) => {
             reg.update();
         }).catch(() => {});
     }
+    const savedStars = parseInt(localStorage.getItem("lumina_student_stars_v3") || "0", 10);
+    const starEl = document.getElementById("studentStarCount");
+    if (starEl) starEl.textContent = String(savedStars);
 }
 
 function setupPwaInstallPrompt() {
@@ -5514,6 +5496,12 @@ function switchNexoraModule(moduleId, activeDockOverride = null) {
     document.querySelectorAll(".nx-module-pane").forEach(p => p.classList.remove("active"));
     const target = document.getElementById(`pane-${moduleId}`);
     if (target) target.classList.add("active");
+
+    if (moduleId === "smart-exam") {
+        startExamCountdown(NX_STATE.examTimerSeconds > 0 ? NX_STATE.examTimerSeconds : 900);
+    } else if (NX_STATE.examTimerInterval) {
+        clearInterval(NX_STATE.examTimerInterval);
+    }
 
     const effectiveDockId = activeDockOverride || (moduleId === "study-coach" ? "mind-analytics" : moduleId);
 
@@ -5709,35 +5697,17 @@ function renderCurriculumViews() {
     });
     hubBox.appendChild(subjectChipsWrap);
 
-    // Learning Hub içine de hızlı Konu Seçimi açılır kutusu ekle
+    // Learning Hub içine sade Konu Seçimi açılır kutusu ekle (Alttaki stüdyo sekmeleriyle tekrar etmeyen tek satır)
     const topicSelectWrap = document.createElement("div");
     topicSelectWrap.style.marginBottom = "12px";
     topicSelectWrap.innerHTML = `
         <label style="font-size:0.74rem;font-weight:800;color:var(--nx-primary-dark);display:block;margin-bottom:4px;">
-            📌 ${subjObj.name} Dersi Konu Seçimi (${flatTopics.length} Konu):
+            📌 ${subjObj.name} Ünite / Konu Seçimi (${flatTopics.length} Ünite):
         </label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <select id="hubDirectTopicSelect" class="nx-btn nx-btn-outline" style="flex:1;min-width:170px;font-size:0.76rem;background:#FFFFFF;"
-                    onchange="openGradeTopicStudioByTitle(this.value, 'learn')">
-                ${flatTopics.map(t => `<option value="${t.title.replace(/"/g, '&quot;')}" ${(NX_STATE.selectedTopic && NX_STATE.selectedTopic.title === t.title) ? 'selected' : ''}>${t.title}</option>`).join("")}
-            </select>
-            <button class="nx-btn nx-btn-primary" style="min-height:34px;padding:4px 10px;font-size:0.73rem;"
-                    onclick="const val=document.getElementById('hubDirectTopicSelect').value;openGradeTopicStudioByTitle(val, 'learn');">
-                📖 Konuyu Öğren
-            </button>
-            <button class="nx-btn nx-btn-outline" style="min-height:34px;padding:4px 10px;font-size:0.73rem;"
-                    onclick="const val=document.getElementById('hubDirectTopicSelect').value;openGradeTopicStudioByTitle(val, 'written');">
-                📝 Okul Yazılısı
-            </button>
-            <button class="nx-btn nx-btn-outline" style="min-height:34px;padding:4px 10px;font-size:0.73rem;"
-                    onclick="const val=document.getElementById('hubDirectTopicSelect').value;openGradeTopicStudioByTitle(val, 'quiz');">
-                🎯 Konu Testi
-            </button>
-            <button class="nx-btn nx-btn-outline" style="min-height:34px;padding:4px 10px;font-size:0.73rem;"
-                    onclick="const val=document.getElementById('hubDirectTopicSelect').value;openGradeTopicStudioByTitle(val, 'flashcards');">
-                🃏 Ezber Kartları
-            </button>
-        </div>
+        <select id="hubDirectTopicSelect" class="nx-btn nx-btn-outline" style="width:100%;font-size:0.78rem;background:#FFFFFF;justify-content:flex-start;"
+                onchange="openGradeTopicStudioByTitle(this.value, 'learn')">
+            ${flatTopics.map(t => `<option value="${t.title.replace(/"/g, '&quot;')}" ${(NX_STATE.selectedTopic && NX_STATE.selectedTopic.title === t.title) ? 'selected' : ''}>${t.title}</option>`).join("")}
+        </select>
     `;
     hubBox.appendChild(topicSelectWrap);
 
@@ -6494,13 +6464,35 @@ function sendQuickSample(text, topicId = null) {
     sendTutorMessage(topicId);
 }
 
-function onVisionFileSelected(event) {
+async function onVisionFileSelected(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         NX_STATE.ephemeralImageBase64 = e.target.result;
-        // Öğrenci fotoğrafı seçtiği anda 'Gönder' tuşunu beklemeden otomatik olarak sohbete yükle ve çöz!
+        const savedGeminiKey = localStorage.getItem("lumina_gemini_api_key");
+        // Eğer Gemini anahtarı yoksa tarayıcıda Tesseract.js Türkçe OCR ile fotoğraftaki metni gerçekten oku!
+        if (!savedGeminiKey) {
+            try {
+                if (!window.Tesseract) {
+                    await new Promise((resolve, reject) => {
+                        const sc = document.createElement("script");
+                        sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+                        sc.onload = resolve;
+                        sc.onerror = reject;
+                        document.head.appendChild(sc);
+                    });
+                }
+                if (window.Tesseract) {
+                    const ocrRes = await window.Tesseract.recognize(NX_STATE.ephemeralImageBase64, "tur");
+                    const extracted = (ocrRes && ocrRes.data && ocrRes.data.text) ? ocrRes.data.text.replace(/\s+/g, " ").trim() : "";
+                    if (extracted.length >= 3) {
+                        const inp = document.getElementById("tutorInputBox");
+                        if (inp && !inp.value.trim()) inp.value = extracted;
+                    }
+                }
+            } catch (ocrErr) {}
+        }
         sendTutorMessage();
     };
     reader.readAsDataURL(file);
@@ -7250,11 +7242,16 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
     // 0. Görsel (Fotoğraftan Soru) veya PDF Analizi
     if (hasImg) {
         const subSolve = raw ? solveMathInMessage(raw, g, subject, mode) : null;
-        return `📸 **LUMINA Vision Engine — Fotoğraftan Soru Analizi (${g}. Sınıf • ${subject} — ${activeTopic.title}):**\n\n` +
-               `• **Görsel İşleme Durumu:** Yüklediğin soru görseli \`${activeTopic.title}\` kazanımları kapsamında incelendi.\n` +
-               (subSolve ? `\n${subSolve}\n` :
-                `• **Çözüm Stratejisi:** Görseldeki soruda verilen değerleri **${activeTopic.title}** (${activeTopic.summary}) temel kuralında yerine koyarak ilerliyoruz.\n` +
-                `• 💡 **İpucu:** Görseldeki sorunun metnini veya işlemini aşağıya kısaca yazarsan satır satır çözerim!`);
+        if (subSolve) {
+            return `📸 **Fotoğraftan Okunan İşlem Çözümü:**\n• **Okunan Metin:** \`${raw}\`\n\n${subSolve}`;
+        }
+        if (raw && raw.length >= 4) {
+            const textReply = buildClientVerifiedResponse(raw, g, subject, mode, false, false, null);
+            return `📸 **Fotoğraftan Okunan Soru Metni:**\n> *"${raw}"*\n\n${textReply}`;
+        }
+        return `📸 **Fotoğraf Çözümü İçin Canlı Yapay Zekâ Bağlantısı Gerekiyor:**\n\n` +
+               `• Fotoğraftaki şekil ve yazıları doğrudan okuyabilmem için sağ üstteki **⚙️ Ayarlar** butonundan ücretsiz **Google Gemini API Anahtarı** girebilirsin.\n` +
+               `• Anahtar olmadan çözmek istersen sorudaki işlemi veya metni aşağıdaki kutuya yazman yeterli!`;
     }
 
     if (hasPdf) {
@@ -7314,25 +7311,32 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
                 break;
             }
         }
-        // Eğer öğrenci başka bir dersin konusunu açıkça yazdıysa o sınıfın diğer derslerinde ara
+        // Eğer öğrenci başka bir dersin veya başka bir sınıfın konusunu açıkça yazdıysa tüm müfredatta ara
         if (!explicitlyFound) {
-            for (const [sName, tList] of Object.entries(gTree.subjects)) {
-                if (sName === subject) continue;
-                for (const tObj of tList) {
-                    const cleanT = stripUnitPrefix(tObj.title);
-                    if (cleanT.length >= 6 && low.includes(cleanT.substring(0, Math.min(16, cleanT.length)))) {
-                        targetTopicObj = tObj;
-                        targetSubjectName = sName;
-                        explicitlyFound = true;
-                        break;
+            const allGradeKeys = [g, ...Object.keys(NEXORA_CURRICULUM_FALLBACK).map(Number).filter(k => k !== g)];
+            for (const gKey of allGradeKeys) {
+                const treeCandidate = NEXORA_CURRICULUM_FALLBACK[gKey];
+                if (!treeCandidate || !treeCandidate.subjects) continue;
+                for (const [sName, tList] of Object.entries(treeCandidate.subjects)) {
+                    for (const tObj of tList) {
+                        const cleanT = stripUnitPrefix(tObj.title);
+                        const words = cleanT.split(/[\s,()/-]+/).filter(w => w.length >= 5);
+                        if ((cleanT.length >= 6 && low.includes(cleanT.substring(0, Math.min(14, cleanT.length)))) ||
+                            words.some(w => low.includes(w))) {
+                            targetTopicObj = tObj;
+                            targetSubjectName = sName;
+                            explicitlyFound = true;
+                            break;
+                        }
                     }
+                    if (explicitlyFound) break;
                 }
                 if (explicitlyFound) break;
             }
         }
     }
 
-    // 5. ANSİKLOPEDİK BİLGİ BANKASI KONTROLÜ (Yalnızca seçili sınıf kademesi ve dersle uyumluysa eşleştir!)
+    // 5. ANSİKLOPEDİK BİLGİ BANKASI KONTROLÜ (Öğrenci açıkça bir kavram sorduysa ders fark etmeksizin yanıtla!)
     let matchedEncyclopedia = null;
     const isGenericActionPrompt = low.includes("seçili konunun") || low.includes("bu konuyu") || low.includes("seviyeme uygun");
     const searchContext = isGenericActionPrompt
@@ -7342,18 +7346,27 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
     for (const item of LUMINA_ENCYCLOPEDIA_KNOWLEDGE) {
         const itemSubjLow = (item.subject || "").toLocaleLowerCase("tr-TR");
         const isHighSchoolOnly = itemSubjLow.includes("ayt") || (itemSubjLow.includes("tyt") && !itemSubjLow.includes("lgs"));
-        if (g <= 6 && isHighSchoolOnly) continue; // İlkokul/5-6. sınıfa AYT/TYT konusu gösterme!
-        if (g <= 4 && itemSubjLow.includes("lgs")) continue; // İlkokula 8. sınıf LGS konusu gösterme!
+        if (g <= 6 && isHighSchoolOnly && isGenericActionPrompt) continue;
+        if (g <= 4 && itemSubjLow.includes("lgs") && isGenericActionPrompt) continue;
 
-        // Ders uyumu kontrolü
         const subjRoot = targetSubjectName.toLocaleLowerCase("tr-TR").split(" ")[0];
-        const subjCompatible = itemSubjLow.includes(subjRoot) ||
+        const subjCompatible = !isGenericActionPrompt ||
+            itemSubjLow.includes(subjRoot) ||
             (subjRoot.includes("fen") && (itemSubjLow.includes("fen") || itemSubjLow.includes("fizik") || itemSubjLow.includes("kimya") || itemSubjLow.includes("biyoloji"))) ||
             (subjRoot.includes("inkılap") && itemSubjLow.includes("inkılap")) ||
             (subjRoot.includes("türk") && (itemSubjLow.includes("türkçe") || itemSubjLow.includes("edebiyat")));
 
         if (subjCompatible && item.keys.some(k => searchContext.includes(k))) {
             matchedEncyclopedia = item;
+            if (!isGenericActionPrompt) {
+                targetSubjectName = item.subject.split("(")[0].trim();
+                targetTopicObj = {
+                    code: `BİLGİ-${g}`,
+                    title: item.title,
+                    summary: item.summary,
+                    outcomes: [item.title]
+                };
+            }
             break;
         }
     }
@@ -7642,22 +7655,23 @@ function speakIfEnabled(text) {
 }
 
 function startVoiceQuestion() {
-    const planCode = NX_STATE.currentUser ? NX_STATE.currentUser.plan_code : "FREE";
-    if (!NEXORA_PLANS[planCode].allow_voice_tutor) {
-        appendTutorBubble("assistant", `⛔ **Paket Kısıtlaması:** Sesli AI Öğretmen özelliği **${planCode}** paketinde kapalıdır. PLUS veya FAMILY üyeliği gereklidir.`, { engine: "VoiceEngineGuard", status: "403 Forbidden" });
-        return;
-    }
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
-        alert("Tarayıcınız Web Speech API ses tanımayı desteklemiyor.");
+        appendTutorBubble("assistant", "🎤 **Sesli Soru Bilgilendirmesi:** Kullandığın telefon tarayıcısı ses tanımayı desteklemiyor. Sorunu klavyedeki mikrofon tuşuyla veya yazarak hemen gönderebilirsin!", { engine: "Ses Motoru", status: "Bilgi" });
         return;
     }
-    const rec = new SpeechRec();
-    rec.lang = "tr-TR";
-    rec.onresult = (e) => {
-        document.getElementById("tutorInputBox").value = e.results[0][0].transcript;
-    };
-    rec.start();
+    try {
+        const rec = new SpeechRec();
+        rec.lang = "tr-TR";
+        rec.onresult = (e) => {
+            document.getElementById("tutorInputBox").value = e.results[0][0].transcript;
+            sendTutorMessage();
+        };
+        rec.onerror = () => {
+            appendTutorBubble("assistant", "🎤 **Mikrofon İzni Gerekli:** Tarayıcıdan mikrofon izni vererek veya klavyendeki sesli yazdırma tuşunu kullanarak sorunu sorabilirsin.", { engine: "Ses Motoru", status: "Bilgi" });
+        };
+        rec.start();
+    } catch (e) {}
 }
 
 /* ==========================================================================
@@ -7665,10 +7679,33 @@ function startVoiceQuestion() {
    ========================================================================== */
 async function loadSmartExamQuestions(incrementVariant = false) {
     const catEl = document.getElementById("examCategoryFilter");
-    const cat = catEl ? catEl.value : "KONU";
     const g = NX_STATE.currentGrade || 8;
     const subj = NX_STATE.currentSubject || "Matematik";
     const topicObj = NX_STATE.selectedTopic;
+
+    // Kategori menüsünü seçili sınıfa göre sadeleştir (2. sınıfa AYT veya 12. sınıfa LGS göstermesin)
+    if (catEl && Number(catEl.dataset.forGrade) !== g) {
+        catEl.dataset.forGrade = String(g);
+        if (g <= 4) {
+            catEl.innerHTML = `<option value="KONU">🎒 ${g}. Sınıf Oyunlu Konu Testi (3 Şıklı)</option>`;
+        } else if (g <= 8) {
+            catEl.innerHTML = `
+                <option value="KONU">📘 ${g}. Sınıf Konu Tarama Testi</option>
+                <option value="YAZILI">📝 MEB Ortak Yazılı Çalışması</option>
+                <option value="IOKBS">🏅 MEB Bursluluk Sınavı (İOKBS)</option>
+                ${g === 8 ? '<option value="LGS">🏆 LGS Deneme Testi</option>' : ''}
+            `;
+        } else {
+            catEl.innerHTML = `
+                <option value="KONU">🎓 ${g}. Sınıf Konu Tarama Testi</option>
+                <option value="YAZILI">📝 MEB Ortak Yazılı Çalışması</option>
+                ${g <= 11 ? '<option value="IOKBS">🏅 MEB Bursluluk Sınavı (İOKBS)</option>' : ''}
+                <option value="TYT">🎯 YKS - TYT Deneme Testi</option>
+                <option value="AYT">🚀 YKS - AYT Deneme Testi</option>
+            `;
+        }
+    }
+    const cat = catEl ? catEl.value : "KONU";
 
     if (incrementVariant) {
         NX_STATE.smartExamSeed = (NX_STATE.smartExamSeed || 0) + 1;
@@ -7695,7 +7732,7 @@ async function loadSmartExamQuestions(incrementVariant = false) {
                     <div>
                         <span class="nx-badge nx-badge-published"><i class="fa-solid fa-medal"></i> ${g}. Sınıf MEB Bursluluk Sınavı (İOKBS) & Ortak Yazılı Hazırlık</span>
                         <p style="font-size:0.77rem;color:#065F46;margin-top:4px;font-weight:600;">
-                            Resmî İOKBS Formatı: <strong>${totalIokbsQ} Soru (${optCount} Şıklı)</strong> • 3 Yanlış 1 Doğruyu Götürür • Burs Kazanma Hedef Taban Puanı: <strong>~${targetCutoff} / 500 Puan</strong>
+                            MEB İOKBS Formatı: <strong>${totalIokbsQ} Soru (${optCount} Şıklı)</strong> • Hedef Taban Puanı: <strong>~${targetCutoff} / 500 Puan</strong>
                         </p>
                     </div>
                     <button type="button" class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 10px;font-size:0.73rem;background:#059669;"
@@ -7762,7 +7799,14 @@ async function loadSmartExamQuestions(incrementVariant = false) {
         box.appendChild(qDiv);
     });
 
-    startExamCountdown(900);
+    const examPane = document.getElementById("pane-smart-exam");
+    if (examPane && examPane.classList.contains("active")) {
+        startExamCountdown(900);
+    } else {
+        NX_STATE.examTimerSeconds = 900;
+        const disp = document.getElementById("examTimerDisplay");
+        if (disp) disp.textContent = "15:00";
+    }
 }
 
 function selectExamOption(questionId, optionKey) {
@@ -7784,7 +7828,20 @@ function startExamCountdown(seconds) {
             const mm = String(Math.floor(NX_STATE.examTimerSeconds / 60)).padStart(2, "0");
             const ss = String(NX_STATE.examTimerSeconds % 60).padStart(2, "0");
             const disp = document.getElementById("examTimerDisplay");
+            const badge = document.getElementById("examTimerBadge");
             if (disp) disp.textContent = `${mm}:${ss}`;
+            if (NX_STATE.examTimerSeconds === 60 && badge) {
+                badge.style.background = "#FEF2F2";
+                badge.style.color = "#DC2626";
+                badge.title = "Son 1 dakika kaldı!";
+            }
+            if (NX_STATE.examTimerSeconds === 0) {
+                clearInterval(NX_STATE.examTimerInterval);
+                const examPane = document.getElementById("pane-smart-exam");
+                if (examPane && examPane.classList.contains("active")) {
+                    submitSmartExam();
+                }
+            }
         }
     }, 1000);
 }
@@ -7887,15 +7944,15 @@ function renderExamEvaluationReport(data) {
    ========================================================================== */
 function getLiveStudentStats() {
     try {
-        const raw = localStorage.getItem("lumina_live_student_stats_v2");
+        const raw = localStorage.getItem("lumina_live_student_stats_v3");
         if (raw) return JSON.parse(raw);
     } catch (e) {}
     return {
-        totalSolved: 18,
-        totalCorrect: 14,
-        todaySolved: 3,
-        studyMinutes: 145,
-        streakDays: 5,
+        totalSolved: 0,
+        totalCorrect: 0,
+        todaySolved: 0,
+        studyMinutes: 0,
+        streakDays: 0,
         topicDelta: {},
         mistakeNotebook: []
     };
@@ -7903,15 +7960,16 @@ function getLiveStudentStats() {
 
 function saveLiveStudentStats(stats) {
     try {
-        localStorage.setItem("lumina_live_student_stats_v2", JSON.stringify(stats));
+        localStorage.setItem("lumina_live_student_stats_v3", JSON.stringify(stats));
     } catch (e) {}
 }
 
 function recordLiveQuestionAttempt(isCorrect, meta = {}) {
     const stats = getLiveStudentStats();
-    stats.totalSolved = (stats.totalSolved || 18) + 1;
-    stats.todaySolved = (stats.todaySolved || 3) + 1;
-    stats.studyMinutes = (stats.studyMinutes || 145) + 2;
+    stats.totalSolved = (stats.totalSolved || 0) + 1;
+    stats.todaySolved = (stats.todaySolved || 0) + 1;
+    stats.studyMinutes = (stats.studyMinutes || 0) + 2;
+    if (!stats.streakDays) stats.streakDays = 1;
 
     const g = meta.grade || NX_STATE.currentGrade || 8;
     const subj = meta.subject || NX_STATE.currentSubject || "Matematik";
@@ -7926,11 +7984,11 @@ function recordLiveQuestionAttempt(isCorrect, meta = {}) {
     stats.topicDelta[key].attempts += 1;
 
     if (isCorrect) {
-        stats.totalCorrect = (stats.totalCorrect || 14) + 1;
+        stats.totalCorrect = (stats.totalCorrect || 0) + 1;
         stats.topicDelta[key].correct += 1;
-        stats.topicDelta[key].deltaScore = Math.min(25, (stats.topicDelta[key].deltaScore || 0) + 4);
+        stats.topicDelta[key].deltaScore = Math.min(100, (stats.topicDelta[key].deltaScore || 0) + 20);
     } else {
-        stats.topicDelta[key].deltaScore = Math.max(-20, (stats.topicDelta[key].deltaScore || 0) - 3);
+        stats.topicDelta[key].deltaScore = Math.max(0, (stats.topicDelta[key].deltaScore || 0) - 5);
         if (!Array.isArray(stats.mistakeNotebook)) stats.mistakeNotebook = [];
         const newMistake = {
             id: "mk_" + Date.now() + "_" + Math.floor(Math.random() * 999),
@@ -7945,7 +8003,6 @@ function recordLiveQuestionAttempt(isCorrect, meta = {}) {
             solution: meta.solution || `${tTitle} temel kazanım kuralı uygulanarak doğru sonuca ulaşılır.`,
             resolved: false
         };
-        // Aynı soruyu üst üste eklememek için kontrol et
         const exists = stats.mistakeNotebook.some(m => m.topic_title === tTitle && m.question_text === newMistake.question_text && !m.resolved);
         if (!exists) {
             stats.mistakeNotebook.unshift(newMistake);
@@ -7961,11 +8018,14 @@ function resolveMistakeFromNotebook(mistakeId) {
     const found = (stats.mistakeNotebook || []).find(m => m.id === mistakeId);
     if (found && !found.resolved) {
         found.resolved = true;
-        stats.totalSolved = (stats.totalSolved || 18) + 1;
-        stats.totalCorrect = (stats.totalCorrect || 14) + 1;
+        stats.totalSolved = (stats.totalSolved || 0) + 1;
+        stats.totalCorrect = (stats.totalCorrect || 0) + 1;
         const key = `${found.grade}_${found.topic_title}`;
-        if (!stats.topicDelta[key]) stats.topicDelta[key] = { attempts: 1, correct: 1, deltaScore: 6 };
-        else stats.topicDelta[key].deltaScore = Math.min(25, (stats.topicDelta[key].deltaScore || 0) + 6);
+        if (!stats.topicDelta[key]) stats.topicDelta[key] = { attempts: 1, correct: 1, deltaScore: 20 };
+        else {
+            stats.topicDelta[key].attempts = (stats.topicDelta[key].attempts || 0) + 1;
+            stats.topicDelta[key].correct = (stats.topicDelta[key].correct || 0) + 1;
+        }
         saveLiveStudentStats(stats);
         awardStudentStars(15, "Yanlış Defterinden Soru Temizlendi!");
         loadMindAnalyticsAndCoach();
@@ -7976,28 +8036,28 @@ async function loadMindAnalyticsAndCoach() {
     const g = NX_STATE.currentGrade || 8;
     const subj = NX_STATE.currentSubject || "Matematik";
     const stats = getLiveStudentStats();
-    const currentStars = parseInt(localStorage.getItem("lumina_student_stars") || "120", 10);
+    const currentStars = parseInt(localStorage.getItem("lumina_student_stars_v3") || "0", 10);
 
     // 1. ÖĞRENCİ RÜTBESİ, YILDIZ SEVİYESİ VE GÜNLÜK 5 SORU HEDEF KARTI
-    let rankTitle = "🥉 Bronz Kaşif";
-    let nextRankTitle = "🥈 Gümüş Bilgin (150 🌟)";
-    let rankPct = Math.min(100, Math.round((currentStars / 150) * 100));
-    if (currentStars >= 300) {
+    let rankTitle = "🥉 Başlangıç Kaşifi";
+    let nextRankTitle = "🥈 Gümüş Bilgin (50 🌟)";
+    let rankPct = Math.min(100, Math.round((currentStars / 50) * 100));
+    if (currentStars >= 150) {
         rankTitle = "👑 Lumina Şampiyonu";
         nextRankTitle = "Maksimum Rütbe Aktif!";
         rankPct = 100;
-    } else if (currentStars >= 200) {
+    } else if (currentStars >= 100) {
         rankTitle = "🥇 Altın Üstat";
-        nextRankTitle = "👑 Lumina Şampiyonu (300 🌟)";
-        rankPct = Math.min(100, Math.round(((currentStars - 200) / 100) * 100));
-    } else if (currentStars >= 150) {
+        nextRankTitle = "👑 Lumina Şampiyonu (150 🌟)";
+        rankPct = Math.min(100, Math.round(((currentStars - 100) / 50) * 100));
+    } else if (currentStars >= 50) {
         rankTitle = "🥈 Gümüş Bilgin";
-        nextRankTitle = "🥇 Altın Üstat (200 🌟)";
-        rankPct = Math.min(100, Math.round(((currentStars - 150) / 50) * 100));
+        nextRankTitle = "🥇 Altın Üstat (100 🌟)";
+        rankPct = Math.min(100, Math.round(((currentStars - 50) / 50) * 100));
     }
 
     const dailyGoalTarget = 5;
-    const dailySolved = stats.todaySolved || 3;
+    const dailySolved = stats.todaySolved || 0;
     const dailyPct = Math.min(100, Math.round((dailySolved / dailyGoalTarget) * 100));
 
     const rankBox = document.getElementById("studentRankAndDailyGoalBox");
@@ -8035,20 +8095,22 @@ async function loadMindAnalyticsAndCoach() {
         `;
     }
 
-    // 2. CANLI ÖZET KARTLARI
-    const overallScore = Math.min(99, Math.max(45, Number(((stats.totalCorrect / Math.max(1, stats.totalSolved)) * 100).toFixed(1))));
+    // 2. CANLI ÖZET KARTLARI (Sahte Başlangıç Verisi Yok, Gerçek Çözümlerle Dolar!)
+    const overallScore = stats.totalSolved > 0
+        ? Math.round((stats.totalCorrect / stats.totalSolved) * 100)
+        : 0;
     const gHeading = document.getElementById("mindAnalyticsGradeHeading");
-    if (gHeading) gHeading.textContent = `${g}. Sınıf Gelişim Raporum & Canlı Öğrenme Hafızası`;
+    if (gHeading) gHeading.textContent = `${g}. Sınıf Gelişim Raporum`;
     const mHeading = document.getElementById("topicMasteryGradeHeading");
-    if (mHeading) mHeading.textContent = `${g}. Sınıf • ${subj} Konu Bazlı Canlı Ustalık Oranlarım`;
+    if (mHeading) mHeading.textContent = `${g}. Sınıf • ${subj} Konu Başarı Oranlarım`;
 
-    document.getElementById("analyticsConfidenceBadge").textContent = `Canlı Ölçüm (${stats.totalSolved} Soru)`;
+    document.getElementById("analyticsConfidenceBadge").textContent = stats.totalSolved > 0 ? `${stats.totalSolved} Soru Çözüldü` : "Yeni Başlangıç";
 
     document.getElementById("analyticsSummaryCards").innerHTML = `
         <div class="nx-card" style="background:var(--nx-surface-alt);">
-            <span style="font-size:0.78rem;color:var(--nx-text-muted);font-weight:700;">Canlı Başarı & Öğrenme Puanı</span>
+            <span style="font-size:0.78rem;color:var(--nx-text-muted);font-weight:700;">Doğruluk Oranım</span>
             <h2 style="font-size:1.7rem;color:var(--nx-primary);margin-top:4px;">%${overallScore}</h2>
-            <p style="font-size:0.75rem;color:var(--nx-text-secondary);">Çözdüğün sorularla anlık güncellenir</p>
+            <p style="font-size:0.75rem;color:var(--nx-text-secondary);">${stats.totalSolved > 0 ? 'Çözdüğün sorulara göre gerçek başarı' : 'İlk sorunu çözdüğünde hesaplanır'}</p>
         </div>
         <div class="nx-card" style="background:var(--nx-surface-alt);">
             <span style="font-size:0.78rem;color:var(--nx-text-muted);font-weight:700;">Toplam Çözülen Soru</span>
@@ -8058,21 +8120,22 @@ async function loadMindAnalyticsAndCoach() {
         <div class="nx-card" style="background:var(--nx-surface-alt);">
             <span style="font-size:0.78rem;color:var(--nx-text-muted);font-weight:700;">Çalışma Süresi & Seri</span>
             <h2 style="font-size:1.7rem;color:var(--nx-text);margin-top:4px;">${stats.studyMinutes} dk • ${stats.streakDays} Gün</h2>
-            <p style="font-size:0.75rem;color:var(--nx-text-secondary);">Düzenli çalışma serisi aktif</p>
+            <p style="font-size:0.75rem;color:var(--nx-text-secondary);">Soru çözdükçe otomatik artar</p>
         </div>
     `;
 
-    // 3. SEÇİLİ SINIFIN (1..12) VE DERSİN GERÇEK KONULARINA GÖRE CANLI USTALIK ÇUBUKLARI
+    // 3. SEÇİLİ SINIFIN (1..12) VE DERSİN GERÇEK ÇÖZÜMLERİNE GÖRE USTALIK ÇUBUKLARI
     const gTree = (typeof NEXORA_CURRICULUM_FALLBACK !== "undefined") ? (NEXORA_CURRICULUM_FALLBACK[g] || NEXORA_CURRICULUM_FALLBACK[8]) : null;
     const subjTopics = (gTree && gTree.subjects && gTree.subjects[subj]) ? gTree.subjects[subj] : [];
 
     const liveMasteries = subjTopics.slice(0, 6).map((t, idx) => {
         const key = `${g}_${t.title}`;
         const dObj = (stats.topicDelta && stats.topicDelta[key]) ? stats.topicDelta[key] : { attempts: 0, correct: 0, deltaScore: 0 };
-        const baseScore = idx === 0 ? 82 : (idx === 1 ? 56 : (68 + (idx * 5) % 20));
-        const finalScore = Math.min(100, Math.max(25, baseScore + (dObj.deltaScore || 0)));
-        const attempts = (idx === 0 ? 8 : 5) + (dObj.attempts || 0);
-        const label = finalScore >= 75 ? "🌟 Güçlü (Sınava Hazır)" : (finalScore >= 55 ? "📈 Gelişiyor (Pratik Yap)" : "🚨 Öncelikli Tekrar Gerekli");
+        const attempts = dObj.attempts || 0;
+        const finalScore = attempts > 0 ? Math.round(((dObj.correct || 0) / attempts) * 100) : 0;
+        const label = attempts === 0
+            ? "⏳ Henüz Soru Çözülmedi"
+            : (finalScore >= 75 ? "🌟 Güçlü (Sınava Hazır)" : (finalScore >= 50 ? "📈 Gelişiyor (Pratik Yap)" : "🚨 Tekrar Gerekli"));
         return {
             topic_code: t.code || `MUF${g}-U${idx + 1}`,
             topic_title: t.title,
@@ -8088,46 +8151,24 @@ async function loadMindAnalyticsAndCoach() {
         <div style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed #E2E8F0;">
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.83rem;font-weight:700;flex-wrap:wrap;gap:6px;">
                 <span>${m.topic_code} — ${m.topic_title}</span>
-                <span style="color:var(--nx-primary);">Ustalık: %${m.weighted_mastery_score}</span>
+                <span style="color:var(--nx-primary);">Başarı: %${m.weighted_mastery_score}</span>
             </div>
             <div class="nx-progress-track">
                 <div class="nx-progress-fill" style="width:${m.weighted_mastery_score}%;"></div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;flex-wrap:wrap;gap:6px;">
-                <small style="color:var(--nx-text-muted);">${m.mastery_label} • ${m.attempts_count} soru denemesi</small>
+                <small style="color:var(--nx-text-muted);">${m.mastery_label} • ${m.attempts_count} soru çözüldü</small>
                 <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.7rem;"
                         onclick="switchNexoraModule('learning-hub');openGradeTopicStudioByTitle('${safeT}', 'quiz', false)">
-                    🎯 Test Çöz & Puanı Artır
+                    🎯 Soru Çöz
                 </button>
             </div>
         </div>
     `;
     }).join("");
 
-    // 4. 📕 YANLIŞ DEFTERİM (ETKİLEŞİMLİ TEKRAR ÇÖZ & DEFTERDEN TEMİZLE)
-    let activeMistakes = (stats.mistakeNotebook || []).filter(m => !m.resolved);
-    if (activeMistakes.length === 0 && subjTopics.length > 0) {
-        const sampleTopic = subjTopics[Math.min(1, subjTopics.length - 1)];
-        const samplePkg = typeof buildGradeTopicLearningStudioData === "function"
-            ? buildGradeTopicLearningStudioData(g, subj, sampleTopic, 0)
-            : null;
-        const sampleQ = (samplePkg && samplePkg.quiz_questions && samplePkg.quiz_questions[0]) ? samplePkg.quiz_questions[0] : null;
-        if (sampleQ) {
-            activeMistakes = [{
-                id: `starter_mk_g${g}`,
-                grade: g,
-                subject: subj,
-                topic_code: sampleTopic.code,
-                topic_title: sampleTopic.title,
-                mistake_category: "calculation_error",
-                question_text: sampleQ.q_text,
-                selected_option: "A",
-                correct_option: sampleQ.correct,
-                solution: sampleQ.solution,
-                resolved: false
-            }];
-        }
-    }
+    // 4. 📕 YANLIŞ DEFTERİM (YALNIZCA ÖĞRENCİNİN GERÇEKTEN YANLIŞ YAPTIĞI SORULAR)
+    const activeMistakes = (stats.mistakeNotebook || []).filter(m => !m.resolved);
 
     const resolvedCount = (stats.mistakeNotebook || []).filter(m => m.resolved).length;
     document.getElementById("mistakesDiagnosticBox").innerHTML = `
@@ -9803,37 +9844,22 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                 </div>
             </div>
 
-            <!-- 6 ANA BÖLÜM SEKMESİ (Çıkmış Sorular • Konu Analizi • Sınav Eğilimleri • AI Soru Üretici • Tahmin Raporu • Bana Özel Öneri) -->
+            <!-- 3 NET BÖLÜM SEKMESİ (Çıkmış Soru Tarzı • Yeni Soru Üret • Konu & 10 Yıl Analizi) -->
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px;">
                 <button class="nx-btn ${activeMode === 'past' ? 'nx-btn-primary' : 'nx-btn-outline'}"
                         style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
                         onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'past', false)">
-                    1. 📜 Çıkmış Sorular
-                </button>
-                <button class="nx-btn ${(activeMode === 'analysis' || activeMode === 'learn') ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
-                        onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'analysis', false)">
-                    2. 📊 Konu Analizi
-                </button>
-                <button class="nx-btn ${activeMode === 'trends' ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
-                        onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'trends', false)">
-                    3. 📈 Sınav Eğilimleri
+                    1. 📜 Örnek Sorular
                 </button>
                 <button class="nx-btn ${activeMode === 'predicted' ? 'nx-btn-primary' : 'nx-btn-outline'}"
                         style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
                         onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'predicted', false)">
-                    4. 🔮 AI Soru Üretici
+                    2. 🔮 Yeni Soru Üret
                 </button>
-                <button class="nx-btn ${activeMode === 'report' ? 'nx-btn-primary' : 'nx-btn-outline'}"
+                <button class="nx-btn ${(activeMode !== 'past' && activeMode !== 'predicted') ? 'nx-btn-primary' : 'nx-btn-outline'}"
                         style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
-                        onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'report', false)">
-                    5. 📑 Tahmin Raporu
-                </button>
-                <button class="nx-btn ${activeMode === 'smartplan' ? 'nx-btn-primary' : 'nx-btn-outline'}"
-                        style="min-height:32px;padding:4px 6px;font-size:0.72rem;"
-                        onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'smartplan', false)">
-                    6. 🎯 Bana Özel Öneri
+                        onclick="openExamTopicAction('${examType}', '${safeSubj}', '${safeTopic}', 'analysis', false)">
+                    3. 📊 Konu Analizi
                 </button>
             </div>
 
@@ -9945,9 +9971,9 @@ function downloadPredictionReportAsPdf(reportTitle) {
 }
 
 function awardStudentStars(points = 10, reasonLabel = "Doğru Cevap!") {
-    const saved = parseInt(localStorage.getItem("lumina_student_stars") || "120", 10);
+    const saved = parseInt(localStorage.getItem("lumina_student_stars_v3") || "0", 10);
     const updated = saved + points;
-    localStorage.setItem("lumina_student_stars", String(updated));
+    localStorage.setItem("lumina_student_stars_v3", String(updated));
 
     const countEl = document.getElementById("studentStarCount");
     const pillEl = document.getElementById("studentStarBadgePill");
@@ -10053,7 +10079,7 @@ function checkStudioQuestionAnswer(qDomId, chosenKey, correctKey) {
         }
         fbContainer.innerHTML = `
             <div style="background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;padding:8px 10px;border-radius:10px;font-size:0.76rem;margin-bottom:6px;">
-                💡 <strong>Moral Boзма!</strong> Bu soru <strong>📕 Yanlış Defterime</strong> kaydedildi. Yukarıdaki adım adım çözümü incele, sonra öğrendiğini kanıtlamak için hemen alttaki <strong>İkiz Soruyu</strong> veya <strong>Sıradaki Soruyu</strong> çöz!
+                💡 <strong>Moral Bozma!</strong> Bu soru <strong>📕 Yanlış Defterime</strong> kaydedildi. Yukarıdaki adım adım çözümü incele, sonra öğrendiğini kanıtlamak için hemen alttaki <strong>İkiz Soruyu</strong> veya <strong>Sıradaki Soruyu</strong> çöz!
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                 <button type="button" class="nx-btn nx-btn-primary" style="min-height:32px;font-size:0.73rem;"
