@@ -2841,6 +2841,120 @@ const NEXORA_CURRICULUM_FALLBACK = {
     }
 };
 
+// ============================================================================
+// 📚 OTOMATİK ALT KONU (SUB-TOPIC) GENİŞLETME MOTORU
+// (1–12. Sınıftaki her ünitenin içindeki alt konuları da bağımsız seçilebilir
+//  konular olarak açar; böylece her derste 5-6 ünite yerine 15-30+ detaylı konu yer alır)
+// ============================================================================
+(function expandNexoraCurriculumToSubtopics() {
+    const extractSubtopicPhrases = (unitTitle, unitSummary) => {
+        const rawList = [];
+        // 1) Başlıktaki parantez içindeki alt konuları çıkar
+        const parenMatch = String(unitTitle || "").match(/\(([^)]+)\)/);
+        if (parenMatch && parenMatch[1]) {
+            parenMatch[1].split(/[,;•/]| ve /i).forEach(part => {
+                const cl = part.trim();
+                if (cl.length >= 4 && !/^\d+$/.test(cl)) rawList.push(cl);
+            });
+        }
+        // 2) Başlığın parantez dışı kısmındaki virgül veya '&' ile ayrılmış ana konuları çıkar
+        const mainHeader = String(unitTitle || "").replace(/^\d+\.\s*ünite\s*:\s*/i, "").replace(/^unit\s*\d+\s*:\s*/i, "").replace(/\([^)]*\)/g, "").trim();
+        mainHeader.split(/[,;&]| ve /i).forEach(part => {
+            const cl = part.trim();
+            if (cl.length >= 4 && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR").includes(cl.toLocaleLowerCase("tr-TR")))) {
+                rawList.push(cl);
+            }
+        });
+        // 3) Özetteki (summary) virgül ve noktalı virgülle ayrılmış alt başlıkları çıkar
+        String(unitSummary || "").replace(/\([^)]*\)/g, "").split(/[,;.]| ve /i).forEach(part => {
+            const cl = part.trim();
+            if (cl.length >= 5 && cl.length <= 65 && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
+                rawList.push(cl);
+            }
+        });
+        return rawList.slice(0, 4);
+    };
+
+    Object.keys(NEXORA_CURRICULUM_FALLBACK).forEach(gradeKey => {
+        const gradeObj = NEXORA_CURRICULUM_FALLBACK[gradeKey];
+        if (!gradeObj || !gradeObj.subjects) return;
+        Object.keys(gradeObj.subjects).forEach(subjName => {
+            const originalUnits = gradeObj.subjects[subjName];
+            if (!Array.isArray(originalUnits)) return;
+            const expandedTopics = [];
+            originalUnits.forEach((uItem, uIdx) => {
+                // Ana Üniteyi ekle
+                expandedTopics.push(uItem);
+                const unitNumMatch = String(uItem.title || "").match(/^(\d+)\.\s*Ünite/i) || String(uItem.title || "").match(/^Unit\s*(\d+)/i);
+                const uNum = unitNumMatch ? unitNumMatch[1] : String(uIdx + 1);
+                const isEngUnit = /^Unit\s*\d+/i.test(String(uItem.title || ""));
+                const subPhrases = extractSubtopicPhrases(uItem.title, uItem.summary);
+                // Eğer en az 2 alt başlık varsa, her birini bağımsız seçilebilir alt konu olarak ekle
+                if (subPhrases.length >= 2) {
+                    subPhrases.forEach((subTitle, sIdx) => {
+                        const capSub = subTitle.charAt(0).toLocaleUpperCase("tr-TR") + subTitle.slice(1);
+                        const siblingFocus = subPhrases.filter((_, idx) => idx !== sIdx).slice(0, 2).join(", ");
+                        const baseOutcome = (Array.isArray(uItem.outcomes) && uItem.outcomes[0])
+                            ? (typeof uItem.outcomes[0] === "string" ? uItem.outcomes[0].replace(/^[^:]+:\s*/, "") : uItem.outcomes[0].description)
+                            : `${capSub} kural ve uygulamalarını çözümler.`;
+                        expandedTopics.push({
+                            id: Number(`${uItem.id || (Number(gradeKey) * 100 + uIdx * 10)}${sIdx + 1}`),
+                            code: `${uItem.code || ("MUF" + gradeKey + "-U" + uNum)}.${sIdx + 1}`,
+                            title: isEngUnit
+                                ? `Unit ${uNum}.${sIdx + 1}: ${capSub}`
+                                : `${uNum}.${sIdx + 1}. Konu: ${capSub}`,
+                            summary: `${capSub} temel kavramları, kuralları, örnek uygulamaları ve ${siblingFocus || uItem.title} ile bağlantısı. (${uItem.summary})`,
+                            difficulty: uItem.difficulty || 3,
+                            content_status: "Published",
+                            outcomes: [
+                                `${uItem.code}.${sIdx + 1}A: ${capSub} konusunun temel tanım, kural ve işlem basamaklarını kavrar ve uygular.`,
+                                `${uItem.code}.${sIdx + 1}B: ${capSub} ile ilgili yazılı ve sınav tarzı muhakeme sorularını adım adım çözer (${baseOutcome})`
+                            ]
+                        });
+                    });
+                }
+            });
+            gradeObj.subjects[subjName] = expandedTopics;
+        });
+    });
+})();
+
+// YKS 23 Branş Konu Takipçisindeki birleşik konuları da alt başlıklarına aç
+(function expandYksTrackerTopics() {
+    if (typeof LUMINA_YKS_GRADIUS_FALLBACK === "undefined" || !Array.isArray(LUMINA_YKS_GRADIUS_FALLBACK.subjects_23_tracker)) return;
+    let totalCount = 0;
+    let completedCount = 0;
+    LUMINA_YKS_GRADIUS_FALLBACK.subjects_23_tracker.forEach(subjEntry => {
+        const newTopics = [];
+        (subjEntry.topics || []).forEach(tItem => {
+            newTopics.push(tItem);
+            const rawParts = String(tItem.topic_name || "")
+                .replace(/\([^)]*\)/g, "")
+                .split(/[,;&]| ve /i)
+                .map(s => s.trim())
+                .filter(s => s.length >= 5);
+            if (rawParts.length >= 2) {
+                rawParts.forEach((part, idx) => {
+                    newTopics.push({
+                        topic_name: `↳ Alt Konu ${idx + 1}: ${part}`,
+                        status: tItem.status,
+                        solved_question_count: Math.max(10, Math.round((tItem.solved_question_count || 60) / rawParts.length)),
+                        has_recurring_alarm: idx === 0 ? Boolean(tItem.has_recurring_alarm) : false
+                    });
+                });
+            }
+        });
+        subjEntry.topics = newTopics;
+        totalCount += newTopics.length;
+        completedCount += newTopics.filter(t => t.status === "completed").length;
+    });
+    if (LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary) {
+        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.total_topics = totalCount;
+        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.completed_topics = completedCount;
+        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.completion_pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    }
+})();
+
 const NEXORA_EXAM_QUESTIONS_FALLBACK = [
     {
         id: "q-lgs-1",
@@ -3529,7 +3643,7 @@ function buildAiTopicStudioData(examType, subjectName, topicName, variantIndex =
     const examLabel = isYks ? "YKS (ÖSYM)" : "LGS (MEB)";
     const special = LUMINA_TOPIC_SPECIAL_BANK[topicName];
 
-    if (special) {
+    if (special && variantIndex === 0) {
         const predList = special.predicted_templates;
         const chosenPred = predList[variantIndex % predList.length];
         return {
@@ -3548,132 +3662,101 @@ function buildAiTopicStudioData(examType, subjectName, topicName, variantIndex =
         };
     }
 
-    // Dinamik Konu Bazlı AI Üretim Motoru (Müfredattaki tüm LGS ve YKS konuları için özelleştirilmiş)
+    // Dinamik Konu Bazlı AI Üretim Motoru: Genel "K, L, M kartları" şablonu yerine
+    // doğrudan ilgili dersin ve konunun gerçek sayısal/sözel soru motorunu (buildGradeTopicLearningStudioData) kullan!
     const cleanTopic = topicName || "Seçili Müfredat Konusu";
     const cleanSubject = subjectName || (isYks ? "YKS Dersi" : "LGS Dersi");
+    const targetGrade = isYks ? (String(cleanSubject).includes("AYT") ? 12 : 10) : 8;
 
-    const coreSummary = `${cleanSubject} müfredatındaki '${cleanTopic}' konusu, ${examLabel} sınavında doğrudan kavram muhakemesi ve bilgiyi yeni duruma aktarma becerisini ölçer. Temel kuralı ezberlemek yerine verilen öncül, tablo veya senaryodaki değişkenler arasındaki neden-sonuç bağıntısını kurmalısın.`;
-    const examSecret = `🔑 Sınav Şifresi: '${cleanTopic}' sorularında önce soru kökündeki anahtar kısıtlamayı ('kesinlikle', 'en az/en çok', 'ulaşılamaz') yuvarlak içine al; ardından verilen bilgiyi formül veya ana kavramla eşleştirerek uç değerleri test et.`;
-    const commonTrap = `⚠️ ${examLabel} Tuzağı: '${cleanTopic}' konusunda öğrencilerin en sık yaptığı hata, öncülde doğru olan bir bilgiyi metinden veya grafikten çıkıyormuş gibi kabul etmek ya da birim/işaret dönüşümünü son adımda atlamaktır.`;
-    const stepExample = `1. Adım: '${cleanTopic}' sorusunda verilen değişkenler ve istenen hedef belirlenir.\n2. Adım: Konunun temel bağıntısı uygulanarak ara değer bulunur ve çeldirici şıklar elenir.\n3. Adım: Bulunan sonuç soru kökündeki koşulla sağlaması yapılarak doğrulanır.`;
+    // Müfredattan eşleşen konuyu bul
+    let matchedTopicObj = {
+        code: isYks ? "YKS-KONU" : "LGS-KONU",
+        title: cleanTopic,
+        summary: `${cleanSubject} dersi ${cleanTopic} temel kural, kavram, formül ve sınav uygulamaları.`,
+        outcomes: [
+            `${cleanTopic} konusunun temel kural ve kavramlarını sınav sorularında uygular.`,
+            `${cleanTopic} ile ilgili grafik, tablo ve yeni nesil muhakeme sorularını çözer.`
+        ]
+    };
 
-    const pastQuestions = isYks ? [
-        {
-            year_badge: "2024 YKS (ÖSYM) Çıkmış Soru Analizi",
-            frequency_note: `${cleanSubject} testinde her yıl yüksek ağırlıkla yoklanan kazanım`,
-            question_text: `[2024 ÖSYM Tarzı - ${cleanTopic}] Bir araştırmacı '${cleanTopic}' konusuyla ilgili yaptığı incelemede;\nI. Temel değişkenler arasındaki doğrusal/nedensel ilişkinin korunduğu,\nII. Başlangıç koşulu değiştirildiğinde sonuç değerinin orantılı olarak değiştiği,\nIII. Sınır değerlerin yalnızca dış etken sabit tutulduğunda geçerli olduğu\ndurumlarını tespit ediyor. Buna göre araştırmacının '${cleanTopic}' kazanımı kapsamında yukarıdaki yargılardan hangilerine kesinlikle ulaşması beklenir?`,
-            options: {
-                A: "Yalnız I",
-                B: "Yalnız II",
-                C: "I ve III",
-                D: "II ve III",
-                E: "I, II ve III"
-            },
-            correct_option: "C",
-            ai_solution: `ÖSYM '${cleanTopic}' sorularında 'kesinlikle' ifadesi yer aldığında her zaman sağlanan I ve III. öncülleri doğru kabul eder. II. öncüldeki 'orantılı değişim' her durumda doğrusal olmayabileceği için kesinlik taşımaz. Doğru cevap C seçeneğidir.`
-        },
-        {
-            year_badge: "2023 YKS (ÖSYM) Çıkmış Soru Analizi",
-            frequency_note: "Kavram yanılgısı ve grafik/öncül birleştirme sorusu",
-            question_text: `[2023 ÖSYM Tarzı - ${cleanTopic}] '${cleanTopic}' konusuyla ilgili aşağıda verilen;\n• K durumu: Temel kuralın doğrudan uygulandığı standart model,\n• L durumu: İki farklı kazanımın birleştirildiği karma uygulama,\n• M durumu: İstisna/sınır koşulunun test edildiği durum\eşleştirmelerinden hangisi ${cleanSubject} müfredat ilkelerine göre her zaman doğrudur?`,
-            options: {
-                A: "Yalnız K",
-                B: "K ve L",
-                C: "K ve M",
-                D: "L ve M",
-                E: "K, L ve M"
-            },
-            correct_option: "E",
-            ai_solution: `${cleanTopic} konusunda K, L ve M durumlarının tamamı müfredat kazanımlarında tanımlanan temel ve sınır koşulları doğru temsil etmektedir. Doğru cevap E seçeneğidir.`
+    const gradesToSearch = isYks ? [12, 11, 10, 9] : [8, 7, 6];
+    const cleanTopicLow = cleanTopic.toLocaleLowerCase("tr-TR");
+    const keywords = cleanTopicLow.split(/[\s,()/-]+/).filter(w => w.length >= 4);
+    for (const gKey of gradesToSearch) {
+        const gTree = NEXORA_CURRICULUM_FALLBACK[gKey];
+        if (!gTree || !gTree.subjects) continue;
+        for (const [sName, tList] of Object.entries(gTree.subjects)) {
+            const found = (tList || []).find(t => {
+                const tLow = String(t.title || "").toLocaleLowerCase("tr-TR");
+                return tLow.includes(cleanTopicLow.substring(0, Math.min(12, cleanTopicLow.length))) ||
+                    (keywords.length > 0 && keywords.slice(0, 2).every(kw => tLow.includes(kw)));
+            });
+            if (found) {
+                matchedTopicObj = found;
+                break;
+            }
         }
-    ] : [
-        {
-            year_badge: "2024 LGS (MEB) Çıkmış Soru Analizi",
-            frequency_note: `${cleanSubject} bölümünde MEB'in her yıl sorduğu beceri temelli kazanım`,
-            question_text: `[2024 LGS Beceri Temelli - ${cleanTopic}] Bir öğretmen '${cleanTopic}' konusunu anlatırken tahtaya K, L ve M kartlarını asarak öğrencilerine şu bilgileri veriyor:\n• K kartı konunun temel kuralını,\n• L kartı günlük hayattaki uygulama örneğini,\n• M kartı ise dikkat edilmesi gereken sınır koşulunu göstermektedir.\nBuna göre '${cleanTopic}' kazanımına göre hangi kartlardaki bilgiler birbiriyle doğrudan neden-sonuç ilişkisi içindedir?`,
-            options: {
-                A: "Yalnız K ve L",
-                B: "Yalnız L ve M",
-                C: "K ve M",
-                D: "K, L ve M"
-            },
-            correct_option: "D",
-            ai_solution: `MEB LGS sorularında '${cleanTopic}' kazanımı hem temel kuralı (K), hem günlük hayat modellemesini (L) hem de sınır koşulunu (M) birlikte kapsar. Üç kart da birbiriyle doğrudan ilişkilidir. Doğru cevap D seçeneğidir.`
-        },
-        {
-            year_badge: "2023 LGS (MEB) Çıkmış Soru Analizi",
-            frequency_note: "Tablo / Grafik ve Yeni Nesil Muhakeme Kalıbı",
-            question_text: `[2023 LGS Tarzı - ${cleanTopic}] Aşağıdaki deney/gözlem tablosunda '${cleanTopic}' ile ilgili iki farklı durum karşılaştırılmıştır:\n• 1. Durumda başlangıç değeri 2 katına çıkarıldığında sonuç doğru orantılı artmaktadır.\n• 2. Durumda ise ortam değişkeni sabit tutulmuştur.\nBuna göre yalnızca bu gözlemden yararlanarak aşağıdaki çıkarımlardan hangisi yapılabilir?`,
-            options: {
-                A: "Sonuç değişkeni başlangıç değerinden bağımsızdır.",
-                B: "1. durumdaki artış, konunun temel bağıntısını doğrulamaktadır.",
-                C: "2. durumda hiçbir kural geçerli değildir.",
-                D: "Her iki durumda da sonuç sıfır olur."
-            },
-            correct_option: "B",
-            ai_solution: `Tablo/deney sorularında yalnızca verilen gözleme bakılır. 1. durumdaki başlangıç değerinin 2 katına çıkmasıyla sonucun artması, '${cleanTopic}' konusunun temel bağıntısını doğrudan doğrular. Doğru cevap B seçeneğidir.`
-        }
-    ];
+        if (matchedTopicObj.id) break;
+    }
 
-    const scenarios = [
-        {
-            tag: "Grafik & Tablo Yorumlama Senaryosu",
-            prob: "%95 Çıkma İhtimali",
-            reason: `Son 3 yılda '${cleanTopic}' konusundan tablo/grafik birleştirmeli muhakeme soruları ağırlık kazandı.`,
-            stem: `[2026 Tahmini #${variantIndex + 1} - Grafik & Muhakeme] '${cleanTopic}' konusuyla ilgili hazırlanan yeni nesil bir simülasyonda; X değişkeni artırılırken Y değişkeninin değişimi inceleniyor. Simülasyon kurallarına göre:\nI. Başlangıç değerleri müfredattaki temel bağıntıyı sağlamaktadır.\nII. X değişkeni yarıya indirildiğinde sistem denge koşulunu korumaktadır.\nIII. Elde edilen grafikte eğim/oran sabit kalmaktadır.\nBuna göre '${cleanTopic}' ilkelerine göre bu ifadelerden hangileri doğrudur?`,
-            ansLgs: "C",
-            optsLgs: { A: "Yalnız I", B: "I ve II", C: "I ve III", D: "I, II ve III" },
-            ansYks: "D",
-            optsYks: { A: "Yalnız I", B: "Yalnız II", C: "I ve II", D: "I ve III", E: "I, II ve III" },
-            sol: `1. Adım: '${cleanTopic}' kazanımına göre temel bağıntı (I) ve oran/eğim korunumu (III) her zaman sağlanır.\n2. Adım: II. öncüldeki yarıya indirme durumunda denge noktası kayacağı için II. öncül elenir.`
-        },
-        {
-            tag: "Günlük Hayat & Deneysel Modelleme",
-            prob: "%93 Çıkma İhtimali",
-            reason: `2026 sınavında '${cleanTopic}' kazanımının gerçek hayat problemi içinde iki aşamalı sorulması bekleniyor.`,
-            stem: `[2026 Tahmini #${variantIndex + 1} - Günlük Hayat Modeli] Zeynep ve Kerem, '${cleanTopic}' konusuyla ilgili bir proje ödevi hazırlarken üç farklı hipotez kuruyor:\n• Zeynep: "Temel kuralı uyguladığımızda ilk aşamadaki değer en yüksek çıkar."\n• Kerem: "Sınır değerleri değiştirdiğimizde ikinci aşama birinci aşamaya eşitlenir."\nYapılan ölçümde hem Zeynep'in hem de Kerem'in hipotezinin doğru olduğu görüldüğüne göre, kullanılan model aşağıdakilerden hangisini kanıtlar?`,
-            ansLgs: "B",
-            optsLgs: {
-                A: "Değişkenlerin birbirini etkilemediğini",
-                B: `${cleanTopic} kuralının her iki sınır koşulunda da tutarlı çalıştığını`,
-                C: "Ölçüm sonuçlarının hatalı olduğunu",
-                D: "Başlangıç değerinin önemsiz olduğunu"
-            },
-            ansYks: "B",
-            optsYks: {
-                A: "Değişkenlerin birbirinden tamamen bağımsız olduğunu",
-                B: `${cleanTopic} ilkesinin her iki sınır koşulunda da tutarlı sonuç verdiğini`,
-                C: "Yalnızca ilk aşamanın geçerli olduğunu",
-                D: "Sınır değerlerin sonucu sıfırladığını",
-                E: "Hipotezlerin çeliştiğini"
-            },
-            sol: `1. Adım: Her iki öğrencinin hipotezi de doğrulandığına göre '${cleanTopic}' kuralı hem standart durumda hem de sınır koşulunda tutarlı çalışmaktadır.\n2. Adım: Bu nedenle doğru cevap B seçeneğidir.`
-        },
-        {
-            tag: "Kavram Yanılgısı & Çeldirici Analizi",
-            prob: "%91 Çıkma İhtimali",
-            reason: `Öğrencilerin '${cleanTopic}' konusunda en çok karıştırdığı iki kavramı ayırt eden seçici soru kalıbı.`,
-            stem: `[2026 Tahmini #${variantIndex + 1} - Seçici Derece Sorusu] '${cleanTopic}' konusuyla ilgili bir sınav sorusunda öğrencilerin en sık düştüğü yanılgıyı ölçmek isteyen bir öğretmen aşağıdaki öncülleri veriyor:\n1) Temel kavramın tanımı doğrudan uygulanır.\n2) Özel/istisna durum göz ardı edilirse sonuç 2 kat fazla bulunur.\nBuna göre hatasız çözüm yapan bir öğrencinin dikkat etmesi gereken temel kural hangisidir?`,
-            ansLgs: "A",
-            optsLgs: {
-                A: "İstisna ve birim koşulunu işlem öncesinde kontrol etmek",
-                B: "Tüm değişkenleri birbirine eşitlemek",
-                C: "Yalnızca son adımı tahmin etmek",
-                D: "Verilen öncülleri okumadan işlem yapmak"
-            },
-            ansYks: "A",
-            optsYks: {
-                A: "İstisna ve tanım kümesi koşulunu işlem öncesinde kontrol etmek",
-                B: "Tüm değişkenleri sabit kabul etmek",
-                C: "Sınır değerleri ihmal etmek",
-                D: "Yalnızca yaklaşık değer kullanmak",
-                E: "Öncülleri ters çevirmek"
-            },
-            sol: `1. Adım: '${cleanTopic}' sorularında derece öğrencilerini ayıran nokta, işlem öncesinde tanım kümesi ve sınır/istisna koşulunu kontrol etmektir.\n2. Adım: Doğru cevap A seçeneğidir.`
-        }
-    ];
+    const pkg0 = typeof buildGradeTopicLearningStudioData === "function"
+        ? buildGradeTopicLearningStudioData(targetGrade, cleanSubject, matchedTopicObj, variantIndex)
+        : null;
+    const pkg1 = typeof buildGradeTopicLearningStudioData === "function"
+        ? buildGradeTopicLearningStudioData(targetGrade, cleanSubject, matchedTopicObj, variantIndex + 2)
+        : null;
 
-    const sc = scenarios[variantIndex % scenarios.length];
+    if (pkg0 && pkg0.quiz_questions && pkg0.quiz_questions.length >= 2) {
+        const qPast1 = pkg0.quiz_questions[0];
+        const qPast2 = pkg0.quiz_questions[1];
+        const qPred = (pkg1 && pkg1.quiz_questions && pkg1.quiz_questions[(variantIndex + 2) % pkg1.quiz_questions.length])
+            ? pkg1.quiz_questions[(variantIndex + 2) % pkg1.quiz_questions.length]
+            : pkg0.quiz_questions[pkg0.quiz_questions.length - 1];
+
+        return {
+            exam_type: examLabel,
+            subject: cleanSubject,
+            topic: cleanTopic,
+            ai_lesson: {
+                core_summary: pkg0.core_rule.replace(/[*`]/g, ""),
+                exam_secret: pkg0.exam_secret.replace(/[*`]/g, ""),
+                common_trap: `⚠️ ${examLabel} Sınav Tuzağı: '${cleanTopic}' sorularında birim/işaret dönüşümünü son adımda atlamak veya soru kökündeki olumsuz ('değildir, ulaşılamaz') ifadeyi gözden kaçırmak en sık yapılan hatadır.`,
+                step_by_step_example: pkg0.worked_example.replace(/[*`]/g, ""),
+                voice_script: pkg0.voice_script
+            },
+            past_questions: [
+                {
+                    year_badge: `2024 ${examLabel} Çıkmış Soru Tarzında Örnek`,
+                    frequency_note: `${cleanSubject} testinde her yıl yüksek ağırlıkla yoklanan kazanım`,
+                    question_text: qPast1.q_text,
+                    options: qPast1.options,
+                    correct_option: qPast1.correct,
+                    ai_solution: qPast1.solution
+                },
+                {
+                    year_badge: `2023 ${examLabel} Çıkmış Soru Tarzında Örnek`,
+                    frequency_note: `${cleanTopic} uygulama ve muhakeme kazanımı`,
+                    question_text: qPast2.q_text,
+                    options: qPast2.options,
+                    correct_option: qPast2.correct,
+                    ai_solution: qPast2.solution
+                }
+            ],
+            predicted_question: {
+                probability: `%95 Çıkma İhtimali (2026 ${examLabel} Tahmini #${variantIndex + 1})`,
+                trend_reason: `'${cleanTopic}' konusundan son yıllarda işlem ve kavram muhakemesini birleştiren bu soru kalıbı öne çıkmaktadır.`,
+                question_text: qPred.q_text,
+                options: qPred.options,
+                correct_option: qPred.correct,
+                ai_solution: qPred.solution
+            }
+        };
+    }
+
+    const coreSummary = `${cleanSubject} müfredatındaki '${cleanTopic}' konusu, ${examLabel} sınavında doğrudan kavram muhakemesi ve bilgiyi yeni duruma aktarma becerisini ölçer.`;
+    const examSecret = `🔑 Sınav Şifresi: '${cleanTopic}' sorularında önce soru kökündeki anahtar kısıtlamayı yuvarlak içine al; ardından verilen bilgiyi ana kavramla eşleştir.`;
+    const commonTrap = `⚠️ ${examLabel} Tuzağı: '${cleanTopic}' konusunda birim/işaret dönüşümünü son adımda atlamamaya dikkat et.`;
+    const stepExample = `1. Adım: '${cleanTopic}' sorusunda verilen değişkenler ve istenen hedef belirlenir.\n2. Adım: Konunun temel bağıntısı uygulanarak doğru şık bulunur.`;
 
     return {
         exam_type: examLabel,
@@ -3684,16 +3767,16 @@ function buildAiTopicStudioData(examType, subjectName, topicName, variantIndex =
             exam_secret: examSecret,
             common_trap: commonTrap,
             step_by_step_example: stepExample,
-            voice_script: `${cleanSubject} dersi, ${cleanTopic} konusunu birlikte öğrenelim. ${coreSummary} ${examSecret} ${commonTrap}`
+            voice_script: `${cleanSubject} dersi, ${cleanTopic} konusunu birlikte öğrenelim. ${coreSummary}`
         },
-        past_questions: pastQuestions,
+        past_questions: [],
         predicted_question: {
-            probability: `${sc.prob} (2026 ${examLabel} - ${sc.tag})`,
-            trend_reason: sc.reason,
-            question_text: sc.stem,
-            options: isYks ? sc.optsYks : sc.optsLgs,
-            correct_option: isYks ? sc.ansYks : sc.ansLgs,
-            ai_solution: sc.sol
+            probability: `%94 Çıkma İhtimali`,
+            trend_reason: `${cleanTopic} temel kazanımı`,
+            question_text: `${cleanTopic} temel kural uygulaması`,
+            options: { A: "Yalnız I", B: "Yalnız II", C: "I ve II", D: "I, II ve III" },
+            correct_option: "D",
+            ai_solution: stepExample
         }
     };
 }
@@ -4986,18 +5069,34 @@ function getOptionCountForGrade(grade) {
     return 5;             // Lise (9-12. Sınıf / YKS): A, B, C, D, E (5 Şıklı)
 }
 
-function trimOptionsToGrade(optionsObj, correctKey, grade) {
+function trimOptionsToGrade(optionsObj, correctKey, grade, shuffleSeed = 0) {
     const count = getOptionCountForGrade(grade);
     const allowedKeys = ["A", "B", "C", "D", "E"].slice(0, count);
-    const result = {};
-    allowedKeys.forEach(k => {
-        if (optionsObj[k] !== undefined) result[k] = optionsObj[k];
+    const rawEntries = [];
+    ["A", "B", "C", "D", "E"].forEach(k => {
+        if (optionsObj[k] !== undefined) {
+            rawEntries.push({ text: optionsObj[k], isCorrect: k === correctKey });
+        }
     });
-    let finalCorrect = correctKey;
-    if (!allowedKeys.includes(correctKey)) {
-        finalCorrect = allowedKeys[allowedKeys.length - 1];
-        result[finalCorrect] = optionsObj[correctKey];
+    // Eğer doğru cevap ilk `count` şık içinde değilse, doğru cevabı mutlaka ilk `count` şık içine al
+    let selectedEntries = rawEntries.slice(0, count);
+    if (!selectedEntries.some(e => e.isCorrect)) {
+        const correctEntry = rawEntries.find(e => e.isCorrect);
+        if (correctEntry && selectedEntries.length > 0) {
+            selectedEntries[selectedEntries.length - 1] = correctEntry;
+        }
     }
+    // Şıkların sırasını deterministik olarak döndür ki doğru cevap hep A veya B şıkkında sabit kalmasın!
+    const len = selectedEntries.length;
+    const shift = Math.abs(Number(shuffleSeed) || 0) % (len || 1);
+    const rotated = selectedEntries.map((_, idx) => selectedEntries[(idx + shift) % len]);
+    const result = {};
+    let finalCorrect = allowedKeys[0];
+    rotated.forEach((entry, idx) => {
+        const key = allowedKeys[idx];
+        result[key] = entry.text;
+        if (entry.isCorrect) finalCorrect = key;
+    });
     return { options: result, correctKey: finalCorrect };
 }
 
@@ -6457,6 +6556,181 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
         }
     ];
 
+    // =========================================================================
+    // 📖 DERS KİTABI DERİNLİĞİNDE DETAYLI KONU ANLATIMI (4 BÖLÜMLÜ TAM DERS)
+    // VE HER KONU İÇİN 5 FARKLI TİPTE ZENGİN, PARAMETRİK SORU HAVUZU
+    // =========================================================================
+    const allSubConcepts = [];
+    const titleParen = String(topicTitle || "").match(/\(([^)]+)\)/);
+    if (titleParen && titleParen[1]) {
+        titleParen[1].split(/[,;•/]| ve /i).forEach(s => {
+            const cl = s.trim();
+            if (cl.length >= 3) allSubConcepts.push(cl);
+        });
+    }
+    summaryConcepts.forEach(s => {
+        const cl = s.replace(/\([^)]*\)/g, "").trim();
+        if (cl.length >= 4 && !allSubConcepts.some(e => e.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
+            allSubConcepts.push(cl);
+        }
+    });
+    while (allSubConcepts.length < 4) {
+        if (allSubConcepts.length === 0) allSubConcepts.push(mainConceptA);
+        else if (allSubConcepts.length === 1) allSubConcepts.push(mainConceptB);
+        else if (allSubConcepts.length === 2) allSubConcepts.push(`${topicTitle} Temel Uygulamaları`);
+        else allSubConcepts.push(`${topicTitle} Sınav ve Muhakeme Yorumu`);
+    }
+
+    const subConceptsBreakdownMd = allSubConcepts.slice(0, 5).map((sc, idx) => {
+        const relOutcome = cleanOutcomeText(outcomes[idx % outcomes.length] || topicSummary);
+        if (isMath) {
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Bu kavramda verilen sayısal veya geometrik büyüklükler standart formüle dönüştürülür. İşlem önceliği, birim uyumu ve işaret kontrolü yapılarak *("${relOutcome}")* kazanımı adım adım uygulanır.`;
+        }
+        if (isSci) {
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Bu bilimsel kavramda sistemin fiziksel, kimyasal veya biyolojik değişimi neden-sonuç ilişkisiyle incelenir. Kontrollü deneylerde bağımsız değişken olarak **${sc}** değiştirildiğinde sistemin tepkisi *("${relOutcome}")* kuralına göre analiz edilir.`;
+        }
+        if (isTr) {
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Metin ve cümle düzeyinde **${sc}** incelenirken sözcüğün veya yargının tek başına anlamına değil, bağlam içinde üstlendiği göreve bakılır *("${relOutcome}")*.`;
+        }
+        if (isEng) {
+            return `• **${idx + 1}. Sub-Topic — ${sc}:** Focuses on communicative context, key vocabulary, and grammar patterns in dialogues and reading texts *("${relOutcome}")*.`;
+        }
+        return `• **${idx + 1}. Alt Başlık — ${sc}:** Tarihsel, coğrafi, felsefi veya toplumsal bağlamda **${sc}** kavramının nedenleri ve sonuçları kanıtlara dayanarak çözümlenir *("${relOutcome}")*.`;
+    }).join("\n");
+
+    const commonTrapsMd = isMath
+        ? `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
+          `1. **İşaret ve Parantez Hatası:** Denklemlerde veya cebirsel ifadelerde eksi \`(-)\` işaretini parantez içine dağıtırken ikinci terimin işaretini değiştirmeyi unutmak.\n` +
+          `2. **Birim ve İstisna Tuzağı:** Soruda verilen birimler (\`cm - m\`, \`dakika - saat\`) farklıyken dönüşüm yapmadan işlem yapmak veya soru kökündeki *"en az, en çok, tam sayı"* şartını gözden kaçırmak.`
+        : (isSci
+            ? `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
+              `1. **Değişkenleri Karıştırma Tuzağı:** Kontrollü deney sorularında araştırmacının kendi değiştirdiği değişken (**Bağımsız Değişken**) ile bunun sonucunda etkilenen değişkeni (**Bağımlı Değişken**) ters almak.\n` +
+              `2. **Grafik ve Birim Yanılgısı:** Grafiklerin sıfırdan mı yoksa belirli bir başlangıç değerinden mi başladığına dikkat etmemek.`
+            : `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
+              `1. **Öncül Dışına Çıkma Tuzağı:** Paragraf, harita veya öncül sorularında kendi genel kültür bilgini katarak *"Bu da doğrudur"* demek! Her zaman yalnızca verilen metin/harita sınırları içinde kal.\n` +
+              `2. **Soru Kökü Yanılgısı:** *"Değildir, ulaşılamaz, çıkarılamaz, yanlıştır"* gibi olumsuz soru köklerini hızlı okurken olumlu sanmak.`);
+
+    const outcomesDetailedMd = outcomes.map((o, i) => `  ${i + 1}. ${cleanOutcomeText(o)}`).join("\n");
+
+    // Zenginleştirilmiş coreRule (Ders Kitabı Derinliğinde 4 Bölümlü Konu Anlatımı)
+    const detailedCoreRule =
+        `📘 **1. BÖLÜM: KONUNUN DETAYLI TANIMI VE KAPSAMI (${topicTitle})**\n` +
+        `• **Ünite / Konu Özü:** ${topicSummary}\n` +
+        `• **Temel İlke:** Bu konuda **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramları birbiriyle doğrudan bağlantılıdır. Konuyu tam öğrenmek için tanımı ezberlemek yerine kuralların hangi koşulda nasıl uygulandığını adım adım takip etmeliyiz.\n\n` +
+        `📗 **2. BÖLÜM: ALT BAŞLIKLAR VE KAVRAM REHBERİ**\n` +
+        `${subConceptsBreakdownMd}\n\n` +
+        `🎯 **3. BÖLÜM: MEB MÜFREDAT KAZANIMLARI VE ÖLÇME HEDEFLERİ**\n` +
+        `${outcomesDetailedMd}\n\n` +
+        `${commonTrapsMd}`;
+
+    // Zenginleştirilmiş workedExample (Tek örnek yerine 3 Aşamalı: Kolay • Orta • Sınav Tarzı Çözümlü Örnek!)
+    const exSeedNum1 = 15 + (variantIdx % 6) * 5;
+    const exSeedNum2 = 25 + (variantIdx % 4) * 5;
+    const secondExampleMd = isMath
+        ? `• **2. Çözümlü Örnek (Orta Seviye — ${allSubConcepts[1]} Uygulaması):**\n` +
+          `  - **Soru:** "${allSubConcepts[0]}" ve "${allSubConcepts[1]}" kurallarına göre; başlangıç değeri **${exSeedNum1}** birim olan bir modelde değişim miktarı **${exSeedNum2}** birim olarak ölçülüyor. Toplam değerin yarısının \`5\` fazlası kaçtır?\n` +
+          `  - **1. Adım:** Önce toplam değeri bulalım: \`${exSeedNum1} + ${exSeedNum2} = ${exSeedNum1 + exSeedNum2}\` birim.\n` +
+          `  - **2. Adım:** Yarısının 5 fazlası: \`(${exSeedNum1 + exSeedNum2} ÷ 2) + 5 = ${(exSeedNum1 + exSeedNum2) / 2} + 5 = ${(exSeedNum1 + exSeedNum2) / 2 + 5}\` bulunur ✔`
+        : `• **2. Çözümlü Örnek (Orta Seviye — Öncüllü Kavram Analizi):**\n` +
+          `  - **Örnek Durum:** Bir öğrenci **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramlarını karşılaştırırken; *"I. ${outDesc1}"* ve *"II. ${outDesc2}"* tespitlerini yapıyor.\n` +
+          `  - **Çözüm Adımı:** Her iki tespit de **${topicTitle}** ünitesinin temel kazanımlarını doğruladığı için **I ve II** birlikte doğrudur ✔`;
+
+    const thirdExampleMd =
+        `• **3. Çözümlü Örnek (İleri / Sınav Tarzı Muhakeme):**\n` +
+        `  - **Senaryo:** Sınavda **${topicTitle}** konusuyla ilgili tablo veya görsel verildiğinde önce **${allSubConcepts[0]}** değişkeninin sınır değerleri kontrol edilir.\n` +
+        `  - **Püf Noktası:** Çeldirici şıklar genellikle **${ otherTopic1.title }** konusunun kurallarını karıştırır; doğru şık ise doğrudan **"${outDesc1}"** ilkesini sağlar ✔`;
+
+    const detailedWorkedExample =
+        `${workedExample}\n\n` +
+        `${secondExampleMd}\n\n` +
+        `${thirdExampleMd}`;
+
+    // Her konunun soru havuzunu 3 sorudan 5 FARKLI SORU TİPİNE çıkar ve şıkları deterministik karıştır
+    const topicHash = String(topicCode + topicTitle).split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const vStep = Math.abs(Number(variantIdx) || 0);
+
+    // 4. Soru: Öncüllü (I - II - III) Muhakeme Sorusu (Varyanta göre doğru öncüller değişir!)
+    const premiseMode = (vStep + topicHash) % 3;
+    const p1Text = `I. ${allSubConcepts[0]} incelenirken "${outDesc1}" ilkesi esas alınır.`;
+    const p2Text = premiseMode === 0
+        ? `II. Bu konuda yalnızca "${otherTopic1.title}" kuralları geçerlidir ve hiçbir kural uygulanmaz.`
+        : `II. ${allSubConcepts[1]} uygulamalarında "${outDesc2}" kazanımı doğrudan geçerlidir.`;
+    const p3Text = premiseMode === 1
+        ? `III. Verilenler arasında hiçbir neden-sonuç veya işlem bağıntısı yoktur.`
+        : `III. ${topicSummary.split(".")[0]} kapsamındaki temel kurallar birbiriyle tutarlıdır.`;
+
+    const q4CorrectRaw = premiseMode === 0 ? "C" : (premiseMode === 1 ? "B" : "D");
+    const q4RawOpts = g <= 4
+        ? {
+            A: "Yalnız I",
+            B: premiseMode === 0 ? "I ve III" : "I ve II",
+            C: "I, II ve III"
+        }
+        : {
+            A: "Yalnız I",
+            B: "I ve II",
+            C: "I ve III",
+            D: "I, II ve III",
+            E: "II ve III"
+        };
+    const q4ActualCorrect = g <= 4 ? (premiseMode === 2 ? "C" : "B") : q4CorrectRaw;
+
+    // 5. Soru: Tablo / Grafik / Yeni Nesil Senaryo Sorusu (Varyanta göre sayısal/kavramsal değerler değişir!)
+    const valK = 20 + ((vStep * 7 + (topicHash % 11)) % 30);
+    const valL = valK + 15 + (vStep % 4) * 5;
+    const valM = valK + valL;
+    const q5Raw = isMath
+        ? {
+            q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Yeni Nesil Tablo Sorusu) Bir uygulamada "${allSubConcepts[0]}" kuralına göre 1. adımda ${valK} birim, 2. adımda ${valL} birim ölçüm yapılmıştır. 3. adımdaki ölçüm ilk iki adımın toplamına eşit olduğuna göre 3. adım değeri kaç birimdir?`,
+            opts: {
+                A: String(valM - 10),
+                B: String(valM - 5),
+                C: String(valM),
+                D: String(valM + 5),
+                E: String(valM + 10)
+            },
+            ans: "C",
+            sol: `1. Adım: İlk iki adımın değerleri ${valK} ve ${valL} birimdir.\n2. Adım: 3. adım değeri = ${valK} + ${valL} = ${valM} birim bulunur.`
+        }
+        : {
+            q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Karşılaştırmalı Tablo & Vaka Sorusu) Bir çalışma grubunda "${allSubConcepts[0]}" (K Grubu) ve "${allSubConcepts[1]}" (L Grubu) incelenmektedir. Yapılan incelemede K ve L gruplarının "${outDesc1}" kazanımını hangi ortak özellikle sağladığı görülür?`,
+            opts: {
+                A: `Konu kapsamı dışındaki "${otherTopic1.title}" kurallarını rastgele uygulamalarıyla`,
+                B: `${topicSummary.split(".")[0]} ilkesine ve neden-sonuç bütünlüğüne tam uymalarıyla`,
+                C: `Tüm kuralları ve tanımları tamamen reddetmeleriyle`,
+                D: `Yalnızca "${otherTopic2.title}" konusuna ait olmalarıyla`,
+                E: `Hiçbir bilimsel veya dilsel kurala dayanmamalarıyla`
+            },
+            ans: "B",
+            sol: `1. Adım: K (${allSubConcepts[0]}) ve L (${allSubConcepts[1]}) alt başlıkları "${topicTitle}" konusunun temel parçalarıdır.\n2. Adım: Her iki grup da "${topicSummary.split(".")[0]}" ilkesine ve "${outDesc1}" kazanımına tam uyar.`
+        };
+
+    quizList.push({
+        q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Öncüllü Muhakeme Sorusu)\n"${topicTitle}" konusuyla ilgili aşağıda verilen;\n${p1Text}\n${p2Text}\n${p3Text}\nyargılarından hangileri DOĞRUDUR?`,
+        options: q4RawOpts,
+        correct: q4ActualCorrect,
+        solution: `1. Adım: I. öncül "${outDesc1}" kazanımını doğrudan ifade ettiği için doğrudur.\n2. Adım: ${premiseMode === 0 ? "II. öncül farklı bir üniteye ait olduğu için yanlıştır, III. öncül doğrudur (I ve III)." : (premiseMode === 1 ? "II. öncül doğrudur, III. öncül çelişkili olduğu için yanlıştır (I ve II)." : "I, II ve III. öncüllerin tamamı konunun MEB kazanımlarıyla örtüşmektedir (I, II ve III).")}`
+    });
+
+    quizList.push({
+        q_text: q5Raw.q,
+        options: q5Raw.opts,
+        correct: q5Raw.ans,
+        solution: q5Raw.sol
+    });
+
+    // Mevcut tüm sorularda doğru şıkkın yerini (A, B, C, D, E) deterministik olarak dağıt
+    quizList = quizList.map((item, qIdx) => {
+        const shuffled = trimOptionsToGrade(item.options, item.correct, g, topicHash + vStep * 3 + qIdx * 2);
+        const updatedSolution = String(item.solution || "").replace(/Doğru cevap [A-E](![\s.]*|\s+seçeneğidir|\b)/g, `Doğru cevap ${shuffled.correctKey} seçeneğidir.`);
+        return {
+            q_text: item.q_text,
+            options: shuffled.options,
+            correct: shuffled.correctKey,
+            solution: updatedSolution
+        };
+    });
+
     return {
         grade: g,
         subject_name: subjectName,
@@ -6466,11 +6740,11 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
         outcomes: outcomes,
         option_mode_label: optLabel,
         visual_svg: visualSvg,
-        core_rule: coreRule,
+        core_rule: detailedCoreRule,
         story_analogy: storyAnalogy,
-        worked_example: workedExample,
+        worked_example: detailedWorkedExample,
         exam_secret: examSecret,
-        voice_script: `${g}. Sınıf ${subjectName} dersi, ${topicTitle} konusuna hoş geldin! ${coreRule.replace(/[*`#]/g, "")} ${examSecret.replace(/[*`#]/g, "")}`,
+        voice_script: `${g}. Sınıf ${subjectName} dersi, ${topicTitle} konusuna hoş geldin! ${topicSummary}. ${outDesc1}. ${examSecret.replace(/[*`#]/g, "")}`,
         written_exam_questions: writtenQuestions,
         quiz_questions: quizList,
         flashcards: flashcards
@@ -6487,24 +6761,33 @@ const LUMINA_LGS_TARGET_HIGH_SCHOOLS = [
     { code: "NITELIKLI_AL", name: "Proje Anadolu Liseleri (Yüzdelik %5-%8)", base_score: 430.0, percentile: 6.20 }
 ];
 
-function buildAdaptiveGradeExamQuestions(grade, subjectName, topicObj, categoryFilter = "") {
+function buildAdaptiveGradeExamQuestions(grade, subjectName, topicObj, categoryFilter = "", examSeed = 0) {
     const g = parseInt(grade, 10) || 8;
     const subj = subjectName || "Matematik";
     const tTitle = (topicObj && topicObj.title) ? topicObj.title : `${g}. Sınıf ${subj} Genel Tarama`;
     const tCode = (topicObj && topicObj.code) ? topicObj.code : `SINAV-${g}`;
     const catLabel = categoryFilter || (g === 8 ? "LGS" : (g >= 9 ? "TYT/AYT" : (g <= 4 ? "İLKOKUL KONU TESTİ" : "ORTAOKUL YAZILI & TEST")));
+    const seedNum = Math.abs(parseInt(examSeed, 10) || 0);
 
     // O sınıftaki tüm konuları çekelim ki 5 soruluk sınav zengin olsun
     const gTree = NEXORA_CURRICULUM_FALLBACK[g] || NEXORA_CURRICULUM_FALLBACK[8];
     const subjTopics = (gTree && gTree.subjects && gTree.subjects[subj]) ? gTree.subjects[subj] : [{ code: tCode, title: tTitle, summary: tTitle }];
+    const startTopicIdx = topicObj
+        ? Math.max(0, subjTopics.findIndex(t => t.title === topicObj.title))
+        : 0;
 
     const questions = [];
     const seenBodies = new Set();
 
     for (let i = 0; i < 5; i++) {
-        const currentTopic = (i === 0 && topicObj) ? topicObj : subjTopics[i % subjTopics.length];
-        const pkg = buildGradeTopicLearningStudioData(g, subj, currentTopic, i);
-        let qItem = pkg.quiz_questions[i % pkg.quiz_questions.length];
+        // Seçili konu varsa ilk 2 soru doğrudan seçili konunun farklı soru tiplerinden, kalan 3 soru kardeş konulardan gelsin;
+        // "Yeni Sınav Üret" (seedNum) tıklandığında hem konular hem soru tipleri hem sayılar tamamen değişsin!
+        const currentTopic = (i < 2 && topicObj)
+            ? topicObj
+            : subjTopics[(startTopicIdx + i + seedNum * 2) % subjTopics.length];
+        const variantForQ = seedNum * 3 + i;
+        const pkg = buildGradeTopicLearningStudioData(g, subj, currentTopic, variantForQ);
+        let qItem = pkg.quiz_questions[(i + seedNum) % pkg.quiz_questions.length];
 
         // Aynı sınav içinde soru metninin tekrar etmesini %100 önle
         const stripHeader = (txt) => String(txt || "").replace(/^\([^)]+\)\s*/, "").trim();
@@ -6513,20 +6796,9 @@ function buildAdaptiveGradeExamQuestions(grade, subjectName, topicObj, categoryF
             if (altCandidate) {
                 qItem = altCandidate;
             } else {
-                const tOut = (pkg.outcomes && pkg.outcomes[i % pkg.outcomes.length]) ? String(pkg.outcomes[i % pkg.outcomes.length]).replace(/^[^:]+:\s*/, "") : pkg.topic_summary;
-                const customOpts = trimOptionsToGrade({
-                    A: `${tOut} ilkesinin doğru uygulanması (${currentTopic.title})`,
-                    B: "Kazanım kapsamı dışındaki ilgisiz ve çelişkili varsayım",
-                    C: "Neden-sonuç ve işlem basamaklarının ters çevrilmesi",
-                    D: "Verilenlerin kontrol edilmeden rastgele seçilmesi",
-                    E: "Birim ve bağlam uyumunun göz ardı edilmesi"
-                }, "A", g);
-                qItem = {
-                    q_text: `(${g}. Sınıf ${subj} • ${currentTopic.title}) "${pkg.topic_summary}" ünitesinin temel kazanımına göre aşağıdakilerden hangisi doğrudur?`,
-                    options: customOpts.options,
-                    correct: customOpts.correctKey,
-                    solution: `1. Adım: "${currentTopic.title}" ünitesinde temel hedef "${tOut}" kazanımıdır.\n2. Adım: Bu kazanımı doğrudan ifade eden A seçeneği doğrudur.`
-                };
+                const altPkg = buildGradeTopicLearningStudioData(g, subj, currentTopic, variantForQ + 2);
+                const altCand2 = altPkg.quiz_questions.find(cand => !seenBodies.has(stripHeader(cand.q_text)));
+                if (altCand2) qItem = altCand2;
             }
         }
         seenBodies.add(stripHeader(qItem.q_text));
@@ -6537,7 +6809,7 @@ function buildAdaptiveGradeExamQuestions(grade, subjectName, topicObj, categoryF
         }));
 
         questions.push({
-            id: `ADAPTIVE-G${g}-Q${i + 1}`,
+            id: `ADAPTIVE-G${g}-S${seedNum}-Q${i + 1}`,
             exam_category: `${g}. Sınıf • ${catLabel}`,
             subject_name: subj,
             topic_code: currentTopic.code || `${tCode}-${i + 1}`,
@@ -7541,20 +7813,19 @@ function renderInitialTutorGreeting(isTopicSwitch = false) {
 
     let greetingMd = "";
     if (g <= 4) {
-        // 1-4. Sınıf İlkokul Öğrencileri İçin Çok Sade, Emojili, Çocuk Dostu Anlatım
+        // 1-4. Sınıf İlkokul Öğrencileri İçin Çok Sade, Emojili, Çocuk Dostu ama Zengin Anlatım
         greetingMd =
             `👋 **Merhaba ${rawUserName}! Ben Senin Robot Öğretmenin LUMINA!**\n\n` +
             `🎒 Bugün birlikte **${g}. Sınıf • ${subj}** dersinde **"${topicObj.title}"** konusunu öğreniyoruz!\n\n` +
-            `🌟 **Bugün Ne Öğreneceğiz?**\n${topicObj.summary}\n\n` +
-            (isEngSubj && pkg ? `${pkg.core_rule}\n\n` : "") +
-            (pkg ? `${pkg.story_analogy}\n\n${pkg.exam_secret}\n\n` : "") +
+            (pkg ? `${pkg.core_rule}\n\n${pkg.story_analogy}\n\n${pkg.exam_secret}\n\n📐 **Adım Adım Çözümlü Örnekler:**\n${pkg.worked_example}\n\n` : `🌟 **Bugün Ne Öğreneceğiz?**\n${topicObj.summary}\n\n`) +
             `👇 *Hemen alttaki **🔊 Sesli Oku** veya **🎯 Şimdi Bana 1 Soru Sor (+10 🌟)** butonuna dokunarak yıldız toplamaya başlayabilirsin!*`;
     } else {
         greetingMd =
-            `👋 **Merhaba! Bugün "${topicObj.title}" konusunu çalışıyoruz.**\n\n` +
-            `📌 **Konu Özeti:** ${topicObj.summary}\n\n` +
-            (pkg ? `${pkg.exam_secret}\n\n${pkg.worked_example}\n\n` : "") +
-            `💡 *Yukarıdaki kartlardan birine dokun ya da sorunu aşağıya yaz.*`;
+            `👋 **Merhaba! Bugün "${topicObj.title}" konusunu tüm detaylarıyla çalışıyoruz.**\n\n` +
+            (pkg
+                ? `${pkg.core_rule}\n\n${pkg.story_analogy}\n\n${pkg.exam_secret}\n\n📐 **Adım Adım Çözümlü Örnekler (Kolay • Orta • Sınav Tarzı):**\n${pkg.worked_example}\n\n`
+                : `📌 **Konu Özeti:** ${topicObj.summary}\n\n`) +
+            `💡 *Alttaki butonlardan **Çözümlü Yeni Örnek** isteyebilir, **🎯 Şimdi Bana 1 Soru Sor** ile kendini test edebilir ya da merak ettiğin soruyu aşağıya yazabilirsin.*`;
     }
 
     const safeVoiceText = pkg
@@ -8733,33 +9004,35 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
     }
 
     // 7. PEDAGOJİK MODA GÖRE (Sokratik / Alternatif / Adım Adım) SEÇİLİ KONUNUN TAM DERS ANLATIMI
-    const coreSummary = matchedEncyclopedia ? `${targetTopicObj.summary}\n• **Detay:** ${matchedEncyclopedia.summary}` : targetTopicObj.summary;
+    const coreSummary = matchedEncyclopedia
+        ? `${pkg ? pkg.core_rule : targetTopicObj.summary}\n\n📚 **Ansiklopedik Ders Notu:**\n${matchedEncyclopedia.summary}\n${matchedEncyclopedia.trap || ""}`
+        : (pkg ? pkg.core_rule : targetTopicObj.summary);
     const secretLine = matchedEncyclopedia ? matchedEncyclopedia.secret : (pkg ? pkg.exam_secret : "");
     const storyLine = matchedEncyclopedia ? matchedEncyclopedia.story : (pkg ? pkg.story_analogy : "");
-    const exampleLine = matchedEncyclopedia ? matchedEncyclopedia.example : (pkg ? pkg.worked_example : "");
+    const exampleLine = matchedEncyclopedia
+        ? `${matchedEncyclopedia.example}\n\n${pkg ? pkg.worked_example : ""}`
+        : (pkg ? pkg.worked_example : "");
 
     if (mode === "socratic") {
         return `🧠 **LUMINA Yol Gösterici Öğretmen — ${g}. Sınıf • ${targetSubjectName} (${targetTopicObj.title}):**\n\n` +
-               `📖 **Konunun Özü:** ${coreSummary}\n\n` +
-               `🎯 **MEB Kazanımlarımız:**\n${outcomesListMd}\n\n` +
+               `${coreSummary}\n\n` +
                `${secretLine}\n\n` +
-               `💭 **Birlikte Düşünelim (Adım Adım Örnek):**\n${exampleLine}\n\n` +
+               `💭 **Birlikte Düşünelim (3 Aşamalı Çözümlü Örnek):**\n${exampleLine}\n\n` +
                `❓ *Şimdi alttaki **🎯 Şimdi Bana 1 Soru Sor** butonuna dokunarak bu kazanımı test etmeye hazır mısın?*`;
     }
 
     if (mode === "alternative") {
         return `🔄 **Alternatif Öğrenme Yöntemleri — ${g}. Sınıf • ${targetSubjectName} (${targetTopicObj.title}):**\n\n` +
-               `• **1. Yöntem (MEB Kazanım & Kural Yaklaşımı):** ${coreSummary}\n${outcomesListMd}\n\n` +
-               `• **2. Yöntem (Hikâyeli & Görsel Modelleme):** ${storyLine}\n\n` +
-               `• **3. Yöntem (Sınav Şifresi & Çözümlü Örnek):** ${secretLine}\n\n${exampleLine}`;
+               `${coreSummary}\n\n` +
+               `• **Hikâyeli & Görsel Modelleme Yaklaşımı:**\n${storyLine}\n\n` +
+               `• **Sınav Şifresi & 3 Aşamalı Çözümlü Örnek:**\n${secretLine}\n\n${exampleLine}`;
     }
 
-    // step_by_step (Adım Adım Anlatım)
-    return `📐 **Adım Adım Konu & Çözüm Rehberi — ${g}. Sınıf • ${targetSubjectName} (${targetTopicObj.title}):**\n\n` +
-           `• **1. Adım (Ünite Kapsamı):** ${coreSummary}\n\n` +
-           `• **2. Adım (MEB Kazanımları):**\n${outcomesListMd}\n\n` +
-           `• **3. Adım (Günlük Hayat & Sınav Şifresi):**\n${storyLine}\n\n${secretLine}\n\n` +
-           `• **4. Adım (Çözümlü Örnek):**\n${exampleLine}`;
+    // step_by_step (Adım Adım Tam Ders Anlatımı)
+    return `📐 **Detaylı Konu Anlatımı & Çözüm Rehberi — ${g}. Sınıf • ${targetSubjectName} (${targetTopicObj.title}):**\n\n` +
+           `${coreSummary}\n\n` +
+           `💡 **Günlük Hayat Modellemesi & Sınav Şifresi:**\n${storyLine}\n\n${secretLine}\n\n` +
+           `📝 **3 Aşamalı Çözümlü Örnekler (Kolay • Orta • Sınav Tarzı):**\n${exampleLine}`;
 }
 
 function appendTutorBubble(role, markdownText, meta = null, extraRawHtml = "") {
@@ -9069,7 +9342,7 @@ async function loadSmartExamQuestions(incrementVariant = false) {
     // Seçili sınıf (1..12), ders ve konuya tam uyumlu sorular üret
     let questions = [];
     if (typeof buildAdaptiveGradeExamQuestions === "function") {
-        questions = buildAdaptiveGradeExamQuestions(g, subj, topicObj, cat);
+        questions = buildAdaptiveGradeExamQuestions(g, subj, topicObj, cat, NX_STATE.smartExamSeed || 0);
     } else {
         questions = NEXORA_EXAM_QUESTIONS_FALLBACK;
     }
