@@ -3931,6 +3931,7 @@ function get10YrTopicAnalysisProfile(examType, subjectName, topicName) {
 }
 
 function buildUniquePerQuestionVisualSvg(subjectName, topicName, questionText, examYear = 2025, qIndex = 0) {
+    const s = String(subjectName || "").toLocaleLowerCase("tr-TR");
     const rawQ = String(questionText || "");
     const cleanQ = rawQ.replace(/^\[[^\]]+\]\s*/g, "").replace(/^\([^)]+\)\s*/g, "").trim();
     const low = `${subjectName} ${topicName} ${cleanQ}`.toLocaleLowerCase("tr-TR");
@@ -4029,8 +4030,9 @@ function buildUniquePerQuestionVisualSvg(subjectName, topicName, questionText, e
         </div>`;
     }
 
-    // 3. Fen Bilimleri, Fizik, Kimya, Biyoloji Deney / Gözlem / Düzenek Soruları
-    if (low.includes("fen") || low.includes("fizik") || low.includes("kimya") || low.includes("biyoloji") || low.includes("basınç") || low.includes("kuvvet") || low.includes("elektrik") || low.includes("dna") || low.includes("hücre") || low.includes("mevsim") || low.includes("asit")) {
+    // 3. Fen Bilimleri, Fizik, Kimya, Biyoloji Deney / Gözlem / Düzenek Soruları (Yalnızca Fen, Fizik, Kimya, Biyoloji Derslerinde!)
+    const isActualScienceSubject = s.includes("fen") || s.includes("fizik") || s.includes("kimya") || s.includes("biyoloji");
+    if (isActualScienceSubject && (low.includes("fen") || low.includes("fizik") || low.includes("kimya") || low.includes("biyoloji") || low.includes("basınç") || low.includes("kuvvet") || low.includes("elektrik") || low.includes("dna") || low.includes("hücre") || low.includes("mevsim") || low.includes("asit"))) {
         const snippet = cleanQ.length > 56 ? cleanQ.substring(0, 56) + "..." : cleanQ;
         return `
         <div style="background:${pal.bg};border:1.5px solid ${pal.border};border-radius:12px;padding:9px;margin:8px 0;text-align:center;">
@@ -4503,9 +4505,10 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     // =========================================================================
     // 3. FEN BİLİMLERİ, FİZİK, KİMYA, BİYOLOJİ (11 FARKLI KONUYA ÖZEL ŞEMA)
     // =========================================================================
-    // 3A. Güneş Sistemi, Dünya, Ay, Mevsimlerin Oluşumu (23°27'), Tutulmalar ve Uzay (Tarih/İnkılap "Dünya Savaşı" Hariç!)
-    const isHistoryOrVerbalSubj = s.includes("tarih") || s.includes("inkılap") || s.includes("sosyal") || s.includes("edebiyat") || s.includes("türkçe") || s.includes("felsefe") || s.includes("din");
-    if (!isHistoryOrVerbalSubj && (t.includes("güneş") || t.includes("mevsim") || t.includes("gezegen") || t.includes("tutulma") || t.includes("uzay") || (t.includes("dünya") && (s.includes("fen") || s.includes("coğrafya") || s.includes("fizik"))))) {
+    // 3A. Güneş Sistemi, Dünya, Ay, Mevsimlerin Oluşumu (23°27'), Tutulmalar ve Uzay (Tarih/İnkılap "Dünya Savaşı" ve İlkokul Hayat Bilgisi Hariç!)
+    const isScienceSubjForSvg = s.includes("fen") || s.includes("fizik") || s.includes("kimya") || s.includes("biyoloji");
+    const isHistoryOrVerbalSubj = s.includes("tarih") || s.includes("inkılap") || s.includes("sosyal") || s.includes("edebiyat") || s.includes("türkçe") || s.includes("felsefe") || s.includes("din") || s.includes("hayat") || s.includes("beden") || s.includes("müzik") || s.includes("görsel");
+    if (!isHistoryOrVerbalSubj && isScienceSubjForSvg && (t.includes("güneş") || t.includes("mevsim") || t.includes("gezegen") || t.includes("tutulma") || t.includes("uzay") || t.includes("dünya"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🌍 ${cleanMainTitle} — 23°27' Eksen Eğikliği, Mevsimler ve Güneş-Dünya-Ay Sistemi</div>
@@ -4533,7 +4536,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3B. Basınç (Katı P=G/S, Sıvı P=h·d·g, Gaz) ve Kaldırma Kuvveti (Arşimet)
-    if (t.includes("basınç") || t.includes("kaldırma kuvveti")) {
+    if (isScienceSubjForSvg && (t.includes("basınç") || t.includes("kaldırma kuvveti"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🧪 ${cleanMainTitle} — Katı Basıncı (G/S), Sıvı Basıncı (h·d·g) ve Kaldırma Kuvveti</div>
@@ -4566,7 +4569,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3C. Basit Makineler, Tork ve Denge
-    if (t.includes("basit makine") || t.includes("makara") || t.includes("kaldıraç") || t.includes("tork")) {
+    if (isScienceSubjForSvg && (t.includes("basit makine") || t.includes("makara") || t.includes("kaldıraç") || t.includes("tork"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">⚙️ ${cleanMainTitle} — Kaldıraçta Tork Dengesi (F·d₁ = P·d₂) ve Hareketli Makara</div>
@@ -4595,8 +4598,8 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         </div>`;
     }
 
-    // 3C-2. Kuvvet, Hareket (Newton F=m·a), Atışlar, İtme-Momentum, Çembersel ve Basit Harmonik Hareket
-    if (t.includes("çembersel") || t.includes("harmonik") || t.includes("kuvvet") || t.includes("hareket") || t.includes("newton") || t.includes("atış") || t.includes("momentum") || t.includes("vektör")) {
+    // 3C-2. Kuvvet, Hareket (Newton F=m·a), Atışlar, İtme-Momentum, Çembersel ve Basit Harmonik Hareket (Yalnızca Fen Bilimleri veya Fizik Dersinde!)
+    if ((s.includes("fizik") || s.includes("fen")) && (t.includes("çembersel") || t.includes("harmonik") || t.includes("kuvvet") || t.includes("hareket") || t.includes("newton") || t.includes("atış") || t.includes("momentum") || t.includes("vektör"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🚀 ${cleanMainTitle} — Newton Hareket Yasası (F_net = m·a) ve Çembersel Hareket (F_m = m·v²/r)</div>
@@ -4631,7 +4634,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3D. Elektrik Devreleri, Elektrostatik, Direnç, Manyetizma ve Mıknatıslar
-    if (t.includes("elektrik") || t.includes("elektrostatik") || t.includes("manyetizma") || t.includes("mıknatıs") || t.includes("direnç")) {
+    if (isScienceSubjForSvg && (t.includes("elektrik") || t.includes("elektrostatik") || t.includes("manyetizma") || t.includes("mıknatıs") || t.includes("direnç"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">⚡ ${cleanMainTitle} — Elektrik Devresi (Ohm Yasası V = I·R) ve Mıknatıs / Elektroskop</div>
@@ -4664,8 +4667,8 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         </div>`;
     }
 
-    // 3E. Işık, Ses, Dalgalar, Optik (Ayna & Mercekler) ve Modern Fizik
-    if (t.includes("ışık") || t.includes("ışığın") || t.includes("aydınlatma") || t.includes("ses") || t.includes("dalga") || t.includes("optik") || t.includes("ayna") || t.includes("mercek") || t.includes("modern fizik") || t.includes("fotoelektrik")) {
+    // 3E. Işık, Ses, Dalgalar, Optik (Ayna & Mercekler) ve Modern Fizik (Yalnızca Fen veya Fizik Dersinde!)
+    if (isScienceSubjForSvg && (t.includes("ışık") || t.includes("ışığın") || t.includes("aydınlatma") || t.includes("ses") || t.includes("dalga") || t.includes("optik") || t.includes("ayna") || t.includes("mercek") || t.includes("modern fizik") || t.includes("fotoelektrik"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🔭 ${cleanMainTitle} — Dalga Boyu (v = λ·f) ve Mercek / Aynada Odak (F) Kırılması</div>
@@ -4690,8 +4693,8 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         </div>`;
     }
 
-    // 3F. Kuvvet, Hareket, Vektörler, Atışlar, Enerji ve İtme-Momentum
-    if (t.includes("kuvvet") || t.includes("hareket") || t.includes("vektör") || t.includes("atış") || t.includes("momentum") || t.includes("çembersel") || t.includes("harmonik") || (s.includes("fizik") && !t.includes("madde") && !t.includes("ısı"))) {
+    // 3F. Kuvvet, Hareket, Vektörler, Atışlar, Enerji ve İtme-Momentum (Yalnızca Fen veya Fizik Dersinde!)
+    if ((s.includes("fizik") || s.includes("fen")) && (t.includes("kuvvet") || t.includes("hareket") || t.includes("vektör") || t.includes("atış") || t.includes("momentum") || t.includes("çembersel") || t.includes("harmonik") || (s.includes("fizik") && !t.includes("madde") && !t.includes("ısı")))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🚀 ${cleanMainTitle} — Dinamik Kuvvet Vektörleri (F_net = m·a) ve Mekanik Enerji</div>
@@ -4717,7 +4720,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3G. Atomun Yapısı, Periyodik Sistem, Kimyasal Bağlar ve Karbon / Organik Kimya
-    if (t.includes("atom") || t.includes("periyodik") || t.includes("etkileşim") || t.includes("bağ") || t.includes("organik") || t.includes("karbon") || t.includes("hidrokarbon") || t.includes("kimya bilimi")) {
+    if (isScienceSubjForSvg && (t.includes("atom") || t.includes("periyodik") || t.includes("etkileşim") || t.includes("bağ") || t.includes("organik") || t.includes("karbon") || t.includes("hidrokarbon") || t.includes("kimya bilimi"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #A7F3D0;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#065F46;margin-bottom:4px;">⚛️ ${cleanMainTitle} — Bohr / Orbital Katman Modeli ve Periyodik Sistem Eğilimleri</div>
@@ -4747,7 +4750,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3H. Madde ve Isı, Maddenin Halleri, Karışımlar, Çözeltiler, Asit-Baz (pH), Tepkimeler ve Denge
-    if (t.includes("madde") || t.includes("ısı") || t.includes("karışım") || t.includes("çözelti") || t.includes("asit") || t.includes("kanun") || t.includes("tepkime") || t.includes("denge") || t.includes("gazlar") || s.includes("kimya")) {
+    if (isScienceSubjForSvg && (t.includes("madde") || t.includes("ısı") || t.includes("karışım") || t.includes("çözelti") || t.includes("asit") || t.includes("kanun") || t.includes("tepkime") || t.includes("denge") || t.includes("gazlar") || s.includes("kimya"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #A7F3D0;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#065F46;margin-bottom:4px;">⚗️ ${cleanMainTitle} — Hal Değişimi / Tepkime Grafiği ve pH (Asit-Baz) Ölçeği</div>
@@ -4777,7 +4780,7 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // 3I. Hücre, Organeller, Mitoz-Mayoz, DNA ve Genetik Kod, Kalıtım ve Genden Proteine
-    if (t.includes("hücre") || t.includes("bölünme") || t.includes("mitoz") || t.includes("dna") || t.includes("kalıtım") || t.includes("genden") || t.includes("üreme")) {
+    if (isScienceSubjForSvg && (t.includes("hücre") || t.includes("bölünme") || t.includes("mitoz") || t.includes("dna") || t.includes("kalıtım") || t.includes("genden") || t.includes("üreme"))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #A7F3D0;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#065F46;margin-bottom:4px;">🧬 ${cleanMainTitle} — Hücre Organelleri, DNA Dizilimi (A=T, G≡C) ve Kalıtım Çaprazlaması</div>
@@ -5071,7 +5074,117 @@ function buildElementaryOrGradeVisualSvg(grade, subjectName, topicTitle, variant
     const isElemMath = lowSubj.includes("matematik");
     const lowT = `${subjectName} ${topicTitle}`.toLocaleLowerCase("tr-TR");
 
-    // 1) İLKOKUL (1-4. SINIF) ÖZEL RENKLİ VE KONUYA ÖZEL SVG GÖRSELLERİ
+    // 1) İLKOKUL (1-4. SINIF) ÖZEL RENKLİ, YAŞA UYGUN VE KONUYA ÖZEL SVG GÖRSELLERİ (Asla Lise Fizik/Kimya Şemasına Düşmez!)
+    if (g <= 4) {
+        if (lowSubj.includes("türkçe") || lowT.includes("harf") || lowT.includes("hece") || lowT.includes("kelime") || lowT.includes("okuma") || lowT.includes("5n1k") || lowT.includes("noktalama") || lowT.includes("sözlük")) {
+            return `
+            <div style="background:#FFFBEB;border:2px solid #FCD34D;border-radius:14px;padding:10px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.74rem;font-weight:800;color:#92400E;margin-bottom:6px;">📖 ${g}. Sınıf Türkçe — ${topicTitle} (Harf • Hece • Kelime • Cümle Bahçesi)</div>
+                <svg viewBox="0 0 380 126" style="width:100%;max-width:370px;height:auto;background:#FFFFFF;border-radius:10px;border:1px solid #FDE68A;">
+                    <!-- 1. Sesli Harfler Kutusu -->
+                    <rect x="14" y="16" width="108" height="72" rx="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2.2"/>
+                    <text x="68" y="36" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400E">8 Ünlü Harfimiz</text>
+                    <text x="68" y="55" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#D97706">A - E - I - İ</text>
+                    <text x="68" y="73" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#D97706">O - Ö - U - Ü</text>
+                    <text x="68" y="108" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#78350F">29 Harfli Alfabe</text>
+                    <!-- 2. Hece Treni (O - KUL) -->
+                    <rect x="134" y="16" width="112" height="72" rx="10" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="2.2"/>
+                    <text x="190" y="36" text-anchor="middle" font-size="10" font-weight="bold" fill="#5B21B6">Hece Treni</text>
+                    <rect x="145" y="46" width="38" height="28" rx="6" fill="#7C3AED"/>
+                    <text x="164" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">O</text>
+                    <rect x="195" y="46" width="42" height="28" rx="6" fill="#10B981"/>
+                    <text x="216" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#FFFFFF">KUL</text>
+                    <text x="190" y="108" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5B21B6">2 Ünlü = 2 Hece</text>
+                    <!-- 3. Noktalama & 5N1K -->
+                    <rect x="258" y="16" width="108" height="72" rx="10" fill="#ECFDF5" stroke="#10B981" stroke-width="2.2"/>
+                    <text x="312" y="36" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">Noktalama &amp; 5N1K</text>
+                    <circle cx="282" cy="60" r="14" fill="#10B981"/><text x="282" y="65" text-anchor="middle" font-size="15" font-weight="bold" fill="#FFFFFF">.</text>
+                    <circle cx="312" cy="60" r="14" fill="#0284C7"/><text x="312" y="65" text-anchor="middle" font-size="14" font-weight="bold" fill="#FFFFFF">?</text>
+                    <circle cx="342" cy="60" r="14" fill="#EF4444"/><text x="342" y="65" text-anchor="middle" font-size="14" font-weight="bold" fill="#FFFFFF">!</text>
+                    <text x="312" y="108" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#065F46">Kim? Ne? Nerede?</text>
+                </svg>
+            </div>`;
+        }
+
+        if (lowSubj.includes("hayat bilgisi") || lowSubj.includes("sosyal")) {
+            return `
+            <div style="background:#ECFDF5;border:2px solid #86EFAC;border-radius:14px;padding:10px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.74rem;font-weight:800;color:#065F46;margin-bottom:6px;">🌱 ${g}. Sınıf ${subjectName} — ${topicTitle} (Okulumuz • Evimiz • Sağlıklı & Güvenli Yaşam)</div>
+                <svg viewBox="0 0 380 126" style="width:100%;max-width:370px;height:auto;background:#FFFFFF;border-radius:10px;border:1px solid #A7F3D0;">
+                    <rect x="14" y="18" width="108" height="72" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2"/>
+                    <text x="68" y="42" text-anchor="middle" font-size="10" font-weight="bold" fill="#1D4ED8">🏫 Okul &amp; Ev</text>
+                    <text x="68" y="62" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1E40AF">Kurallara Uyarız</text>
+                    <text x="68" y="78" text-anchor="middle" font-size="9" fill="#3B82F6">Yardımlaşma &amp; Saygı</text>
+                    <rect x="136" y="18" width="108" height="72" rx="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+                    <text x="190" y="42" text-anchor="middle" font-size="10" font-weight="bold" fill="#B45309">🚦 Güvenli Hayat</text>
+                    <circle cx="168" cy="64" r="8" fill="#EF4444"/><circle cx="190" cy="64" r="8" fill="#F59E0B"/><circle cx="212" cy="64" r="8" fill="#10B981"/>
+                    <text x="190" y="84" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400E">Acil Yardım: 112</text>
+                    <rect x="258" y="18" width="108" height="72" rx="10" fill="#F0FDF4" stroke="#10B981" stroke-width="2"/>
+                    <text x="312" y="42" text-anchor="middle" font-size="10" font-weight="bold" fill="#047857">🌍 Doğa &amp; Sağlık</text>
+                    <text x="312" y="62" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#065F46">Dengeli Beslenme</text>
+                    <text x="312" y="78" text-anchor="middle" font-size="9" fill="#059669">Geri Dönüşüm ♻️</text>
+                    <text x="190" y="110" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#065F46">Bilinçli, Sağlıklı ve Sorumlu Öğrenci</text>
+                </svg>
+            </div>`;
+        }
+
+        if (lowSubj.includes("fen")) {
+            return `
+            <div style="background:#EFF6FF;border:2px solid #93C5FD;border-radius:14px;padding:10px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.74rem;font-weight:800;color:#1D4ED8;margin-bottom:6px;">🔬 ${g}. Sınıf Fen Bilimleri — ${topicTitle} (Doğa, Dünya ve Gözlem)</div>
+                <svg viewBox="0 0 380 126" style="width:100%;max-width:370px;height:auto;background:#FFFFFF;border-radius:10px;border:1px solid #BFDBFE;">
+                    <circle cx="65" cy="56" r="32" fill="#38BDF8" stroke="#0284C7" stroke-width="2.5"/>
+                    <path d="M 48 44 Q 65 36 78 52 Q 65 72 48 64 Z" fill="#10B981"/>
+                    <text x="65" y="108" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369A1">Gezegenimiz Dünya</text>
+                    <rect x="132" y="22" width="116" height="68" rx="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+                    <text x="190" y="45" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400E">Maddenin 3 Hali</text>
+                    <text x="190" y="64" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#B45309">Katı • Sıvı • Gaz</text>
+                    <text x="190" y="80" text-anchor="middle" font-size="9" fill="#78350F">5 Duyu &amp; Gözlem</text>
+                    <rect x="264" y="22" width="102" height="68" rx="10" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
+                    <text x="315" y="45" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">Canlılar &amp; Kuvvet</text>
+                    <text x="315" y="64" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#047857">İtme ve Çekme</text>
+                    <text x="315" y="80" text-anchor="middle" font-size="9" fill="#059669">Bitki &amp; Hayvanlar</text>
+                </svg>
+            </div>`;
+        }
+
+        if (lowSubj.includes("ingilizce")) {
+            return `
+            <div style="background:#EFF6FF;border:2px solid #93C5FD;border-radius:14px;padding:10px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.74rem;font-weight:800;color:#1D4ED8;margin-bottom:6px;">🇬🇧 ${g}. Sınıf İngilizce — ${topicTitle}</div>
+                <svg viewBox="0 0 380 120" style="width:100%;max-width:370px;height:auto;background:#FFFFFF;border-radius:10px;border:1px solid #BFDBFE;">
+                    <rect x="16" y="18" width="108" height="72" rx="12" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+                    <text x="70" y="46" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">Hello! 👋</text>
+                    <text x="70" y="66" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#B45309">How are you?</text>
+                    <rect x="136" y="18" width="108" height="72" rx="12" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="2"/>
+                    <text x="190" y="46" text-anchor="middle" font-size="11" font-weight="bold" fill="#5B21B6">1 - 2 - 3 - 4 - 5</text>
+                    <text x="190" y="66" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#6D28D9">Red • Blue • Green</text>
+                    <rect x="256" y="18" width="108" height="72" rx="12" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
+                    <text x="310" y="46" text-anchor="middle" font-size="11" font-weight="bold" fill="#065F46">I can! 🌟</text>
+                    <text x="310" y="66" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#047857">I like apples 🍎</text>
+                </svg>
+            </div>`;
+        }
+
+        if (lowSubj.includes("görsel") || lowSubj.includes("müzik") || lowSubj.includes("beden") || !isElemMath) {
+            return `
+            <div style="background:#FAF5FF;border:2px solid #C4B5FD;border-radius:14px;padding:10px;margin:8px 0;text-align:center;">
+                <div style="font-size:0.74rem;font-weight:800;color:#5B21B6;margin-bottom:6px;">🎨 ${g}. Sınıf ${subjectName} — ${topicTitle} (Sanat • Müzik • Oyun ve Hareket)</div>
+                <svg viewBox="0 0 380 120" style="width:100%;max-width:370px;height:auto;background:#FFFFFF;border-radius:10px;border:1px solid #DDD6FE;">
+                    <rect x="16" y="18" width="108" height="72" rx="12" fill="#FEF2F2" stroke="#EF4444" stroke-width="2"/>
+                    <circle cx="48" cy="48" r="10" fill="#EF4444"/><circle cx="70" cy="48" r="10" fill="#F59E0B"/><circle cx="92" cy="48" r="10" fill="#3B82F6"/>
+                    <text x="70" y="76" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#991B1B">Ana Renklerimiz</text>
+                    <rect x="136" y="18" width="108" height="72" rx="12" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2"/>
+                    <text x="190" y="48" text-anchor="middle" font-size="16" font-weight="bold" fill="#1D4ED8">🎵 🎶 🎼</text>
+                    <text x="190" y="74" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1E40AF">Ritim &amp; Şarkılar</text>
+                    <rect x="256" y="18" width="108" height="72" rx="12" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
+                    <text x="310" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#059669">⚽ 🏃‍♂️ 🤝</text>
+                    <text x="310" y="74" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#065F46">Oyun &amp; İş Birliği</text>
+                </svg>
+            </div>`;
+        }
+    }
+
     if (g <= 4 && isElemMath) {
         if (lowT.includes("kesir") || lowT.includes("bütün") || lowT.includes("yarım") || lowT.includes("çeyrek") || lowT.includes("saat") || lowT.includes("zaman")) {
             return `
@@ -5229,11 +5342,12 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
     const optLabel = optCount === 3 ? "3 Şıklı (A-B-C • İlkokul Seviyesi)" : (optCount === 4 ? "4 Şıklı (A-B-C-D • Ortaokul/LGS Seviyesi)" : "5 Şıklı (A-B-C-D-E • Lise/YKS Seviyesi)");
     const visualSvg = buildElementaryOrGradeVisualSvg(g, subjectName, topicTitle, variantIdx);
 
+    const lowSubj = String(subjectName || "").toLocaleLowerCase("tr-TR");
     const low = `${subjectName} ${topicTitle}`.toLocaleLowerCase("tr-TR");
-    const isMath = low.includes("matematik") || low.includes("sayı") || low.includes("kesir") || low.includes("denklem") || low.includes("fonksiyon") || low.includes("türev") || low.includes("integral") || low.includes("polinom") || low.includes("olasılık") || low.includes("geometri") || low.includes("üçgen") || low.includes("toplama") || low.includes("çarpma");
-    const isSci = low.includes("fen") || low.includes("fizik") || low.includes("kimya") || low.includes("biyoloji") || low.includes("hayat bilgisi") || low.includes("kuvvet") || low.includes("hücre") || low.includes("madde") || low.includes("elektrik") || low.includes("canlı");
-    const isTr = low.includes("türkçe") || low.includes("edebiyat") || low.includes("okuma") || low.includes("harf") || low.includes("cümle") || low.includes("paragraf") || low.includes("fiilimsi") || low.includes("sözcük");
-    const isEng = low.includes("ingilizce") || low.includes("yabancı dil");
+    const isMath = (lowSubj.includes("matematik") || lowSubj.includes("geometri")) || (!lowSubj.includes("beden") && !lowSubj.includes("müzik") && !lowSubj.includes("görsel") && (low.includes("sayı") || low.includes("kesir") || low.includes("denklem") || low.includes("fonksiyon") || low.includes("türev") || low.includes("integral") || low.includes("polinom") || low.includes("olasılık") || low.includes("üçgen") || low.includes("toplama") || low.includes("çarpma")));
+    const isSci = (lowSubj.includes("fen") || lowSubj.includes("fizik") || lowSubj.includes("kimya") || lowSubj.includes("biyoloji")) && !lowSubj.includes("beden") && !lowSubj.includes("müzik") && !lowSubj.includes("görsel");
+    const isTr = lowSubj.includes("türkçe") || lowSubj.includes("edebiyat");
+    const isEng = lowSubj.includes("ingilizce") || lowSubj.includes("yabancı dil") || lowSubj.includes("ydt");
 
     const cleanOutcomeText = (rawOut) => {
         const s = String(rawOut || "");
@@ -7109,10 +7223,33 @@ function synthesizeDistinctNewGenQuestion(grade, subjectName, topicObj, archetyp
     const c2 = parts[1] || out1;
     const c3 = parts[2] || out2;
 
+    const lowSubjOnly = String(subjectName || "").toLocaleLowerCase("tr-TR");
     const low = `${subjectName} ${topicTitle} ${topicSummary}`.toLocaleLowerCase("tr-TR");
-    const isMath = low.includes("matematik") || low.includes("geometri") || low.includes("sayı") || low.includes("çarpan") || low.includes("üslü") || low.includes("karekök") || low.includes("denklem") || low.includes("fonksiyon") || low.includes("türev") || low.includes("integral") || low.includes("polinom") || low.includes("olasılık") || low.includes("üçgen") || low.includes("trigonometri") || low.includes("kesir");
-    const isSci = !isMath && (low.includes("fen") || low.includes("fizik") || low.includes("kimya") || low.includes("biyoloji") || low.includes("kuvvet") || low.includes("basınç") || low.includes("hücre") || low.includes("dna") || low.includes("madde") || low.includes("elektrik") || low.includes("mevsim") || low.includes("dalga") || low.includes("optik"));
-    const isEng = low.includes("ingilizce") || low.includes("yabancı dil") || low.includes("ydt");
+    const isMath = lowSubjOnly.includes("matematik") || lowSubjOnly.includes("geometri");
+    const isSci = !isMath && (lowSubjOnly.includes("fen") || lowSubjOnly.includes("fizik") || lowSubjOnly.includes("kimya") || lowSubjOnly.includes("biyoloji"));
+    const isEng = lowSubjOnly.includes("ingilizce") || lowSubjOnly.includes("yabancı dil") || lowSubjOnly.includes("ydt");
+
+    // "21 Haziran", "21 Aralık" gibi tarih ifadelerini deney değişkeni olarak kullanmamak için anlamlı kavramları filtrele
+    const cleanTopicShort = String(topicTitle || "").replace(/^\d+\.\s*ünite\s*:\s*/i, "").replace(/\([^)]*\)/g, "").trim();
+    const validSciConcepts = parts.filter(p => !/^\d+\s*(haziran|aralık|mart|eylül)/i.test(p) && p.length >= 5);
+    let sciVarA = validSciConcepts[0] || `${cleanTopicShort} Temel Değişkeni`;
+    let sciVarB = validSciConcepts[1] || `${cleanTopicShort} Ölçüm Sonucu`;
+    if (low.includes("mevsim") || low.includes("eksen") || low.includes("iklim")) {
+        sciVarA = "Güneş ışınlarının düşme açısı ve eksen eğikliği (23°27')";
+        sciVarB = "Birim yüzeye düşen ışık enerjisi ve sıcaklık değişimi";
+    } else if (low.includes("dna") || low.includes("kalıtım") || low.includes("genetik")) {
+        sciVarA = "Çaprazlanan bireylerin genotip yapısı (Alel genler)";
+        sciVarB = "Oluşan döllerdeki fenotip ve karakter oranı";
+    } else if (low.includes("basınç")) {
+        sciVarA = "Temas yüzey alanı (S) ve sıvı derinliği (h)";
+        sciVarB = "Yüzeye uygulanan basınç büyüklüğü (Pascal)";
+    } else if (low.includes("elektrik") || low.includes("direnç") || low.includes("manyetizma")) {
+        sciVarA = "Devredeki iletken direnci (R) ve pil sayısı";
+        sciVarB = "Devreden geçen akım şiddeti (I) ve ampul parlaklığı";
+    } else if (low.includes("kuvvet") || low.includes("hareket") || low.includes("enerji")) {
+        sciVarA = "Cisme uygulanan net kuvvet (F_net)";
+        sciVarB = "Cismin kazandığı ivme (a) ve kinetik enerji";
+    }
 
     const arch = Math.abs(archetypeIdx) % 12;
     const sStep = Math.abs(seedVal) % 9;
@@ -7309,31 +7446,31 @@ function synthesizeDistinctNewGenQuestion(grade, subjectName, topicObj, archetyp
         // FEN BİLİMLERİ, FİZİK, KİMYA, BİYOLOJİ İÇİN 6 FARKLI YENİ NESİL DENEY & MUHAKEME ARKETİPİ
         const sciArchetypes = [
             {
-                q: `[Kontrollü Deney & Değişken Analizi • ${topicTitle}] Bir öğrenci laboratuvarda "${c1}" etkisini araştırmak için iki özdeş düzenek kuruyor. 1. ve 2. düzenekte tüm koşulları aynı tutup yalnızca "${c1}" miktarını değiştiriyor ve bunun sonucunda "${c2}" değerindeki değişimi ölçüyor. Buna göre bu deneyin Bağımsız Değişkeni ve Bağımlı Değişkeni aşağıdakilerden hangisinde doğru verilmiştir?`,
+                q: `[Kontrollü Deney & Değişken Analizi • ${topicTitle}] Bir öğrenci laboratuvarda "${sciVarA}" etkisini araştırmak için iki özdeş düzenek kuruyor. 1. ve 2. düzenekte tüm koşulları aynı tutup yalnızca "${sciVarA}" özelliğini değiştiriyor ve bunun sonucunda "${sciVarB}" üzerindeki değişimi ölçüyor. Buna göre bu deneyin Bağımsız Değişkeni ve Bağımlı Değişkeni aşağıdakilerden hangisinde doğru verilmiştir?`,
                 opts: {
-                    A: `Bağımsız Değişken: ${c1} — Bağımlı Değişken: ${c2}`,
-                    B: `Bağımsız Değişken: ${c2} — Bağımlı Değişken: ${c1}`,
+                    A: `Bağımsız Değişken: ${sciVarA} — Bağımlı Değişken: ${sciVarB}`,
+                    B: `Bağımsız Değişken: ${sciVarB} — Bağımlı Değişken: ${sciVarA}`,
                     C: `Bağımsız Değişken: Ortam Sıcaklığı — Bağımlı Değişken: Kap Hacmi`,
                     D: `Her ikisi de kontrol edilen (sabit tutulan) değişkendir`,
                     E: `Deneyde bağımsız değişken kullanılmamıştır`
                 },
                 ans: "A",
-                sol: `1. Adım: Deneyde araştırmacının kendi eliyle değiştirdiği etken ("${c1}") Bağımsız Değişkendir.\n2. Adım: Bağımsız değişkene bağlı olarak sonuçta etkilenen ve ölçülen büyüklük ("${c2}") ise Bağımlı Değişkendir.`
+                sol: `1. Adım: Deneyde araştırmacının kendi eliyle değiştirdiği etken ("${sciVarA}") Bağımsız Değişkendir.\n2. Adım: Bağımsız değişkene bağlı olarak sonuçta etkilenen ve ölçülen büyüklük ("${sciVarB}") ise Bağımlı Değişkendir.`
             },
             {
-                q: `[Hipotez Doğrulama & Grafik Yorumu • ${topicTitle}] Bilimsel bir araştırmada: "Bir sistemde '${out1}' ilkesi gereği '${c1}' faktörü artırıldığında sistemin tepkisi belirli bir kurala göre değişir." hipotezi kuruluyor. Araştırmacının bu hipotezi kanıtlayabilmesi için aşağıdaki adımlardan hangisini yapması BİLİMSEL YÖNTEME en uygundur?`,
+                q: `[Hipotez Doğrulama & Grafik Yorumu • ${topicTitle}] Bilimsel bir araştırmada: "Bir sistemde '${out1}' ilkesi gereği '${sciVarA}' faktörü değiştirildiğinde sistemin tepkisi belirli bir bilimsel kurala göre değişir." hipotezi kuruluyor. Araştırmacının bu hipotezi kanıtlayabilmesi için aşağıdaki adımlardan hangisini yapması BİLİMSEL YÖNTEME en uygundur?`,
                 opts: {
                     A: "Hiç ölçüm yapmadan yalnızca tahminde bulunmak",
-                    B: `Diğer tüm değişkenleri sabit tutup yalnız "${c1}" değişkenini kademeli olarak değiştirerek "${c2}" sonuçlarını tablo ve grafiğe kaydetmek`,
+                    B: `Diğer tüm değişkenleri sabit tutup yalnız "${sciVarA}" değişkenini kademeli olarak değiştirerek "${sciVarB}" sonuçlarını tablo ve grafiğe kaydetmek`,
                     C: "Aynı anda hem sıcaklığı, hem kütleyi, hem hacmi rastgele değiştirmek",
                     D: "Deney sonuçlarını hipoteze uymadığı zaman silmek",
                     E: "Standart ölçü birimlerini (SI) kullanmayı reddetmek"
                 },
                 ans: "B",
-                sol: `1. Adım: Bir hipotezi bilimsel olarak test etmenin tek yolu kontrollü deney yapmaktır.\n2. Adım: Yalnız "${c1}" değiştirilip diğer şartlar sabit tutularak "${c2}" verileri grafikle doğrulanır.`
+                sol: `1. Adım: Bir hipotezi bilimsel olarak test etmenin tek yolu kontrollü deney yapmaktır.\n2. Adım: Yalnız "${sciVarA}" değiştirilip diğer şartlar sabit tutularak "${sciVarB}" verileri grafikle doğrulanır.`
             },
             {
-                q: `[Öncüllü Bilimsel Muhakeme • ${topicTitle}] "${topicTitle}" ünitesinde incelenen fiziksel, kimyasal ve biyolojik süreçlerle ilgili;\nI. ${out1}\nII. ${c1} ve ${c2} etkileşimlerinde toplam kütle ve toplam enerji korunum yasalarına tabidir.\nIII. Doğadaki bu gerçekleşmeler hiçbir bilimsel yasaya bağlı olmadan tamamen tesadüfi sonuçlar üretir.\nyargılarından hangileri DOĞRUDUR?`,
+                q: `[Öncüllü Bilimsel Muhakeme • ${topicTitle}] "${topicTitle}" ünitesinde incelenen fiziksel, kimyasal ve biyolojik süreçlerle ilgili;\nI. ${out1}\nII. ${sciVarA} ve ${sciVarB} etkileşimlerinde toplam kütle ve toplam enerji korunum yasalarına tabidir.\nIII. Doğadaki bu gerçekleşmeler hiçbir bilimsel yasaya bağlı olmadan tamamen tesadüfi sonuçlar üretir.\nyargılarından hangileri DOĞRUDUR?`,
                 opts: { A: "Yalnız I", B: "I ve II", C: "I ve III", D: "II ve III", E: "I, II ve III" },
                 ans: "B",
                 sol: `1. Adım: I. öncül konunun resmî müfredat kazanımını ("${out1}") ifade eder.\n2. Adım: II. öncül temel doğa bilimleri korunum ilkesini doğrular.\n3. Adım: III. öncül bilimsel nedenselliği reddettiği için yanlıştır. Cevap: I ve II.`
@@ -7351,16 +7488,16 @@ function synthesizeDistinctNewGenQuestion(grade, subjectName, topicObj, archetyp
                 sol: `1. Adım: "${topicTitle}" konusundaki bilimsel ilkeler ("${out1}") teknolojide verimlilik, denge ve güvenlik sağlamak amacıyla kullanılır.`
             },
             {
-                q: `[Kavram Yanılgısı Teşhisi • ${topicTitle}] Öğretmen derste "${topicTitle}" konusunu anlattıktan sonra öğrencilerine "${c1}" ile "${c2}" arasındaki ilişkiyi soruyor. Hangi öğrencinin yaptığı yorumda BİLİMSEL BİR KAVRAM YANILGISI vardır?`,
+                q: `[Kavram Yanılgısı Teşhisi • ${topicTitle}] Öğretmen derste "${topicTitle}" konusunu anlattıktan sonra öğrencilerine "${sciVarA}" ile "${sciVarB}" arasındaki ilişkiyi soruyor. Hangi öğrencinin yaptığı yorumda BİLİMSEL BİR KAVRAM YANILGISI vardır?`,
                 opts: {
                     A: `Zeynep: "${out1}"`,
-                    B: `Emir: "${c1} incelenirken standart birimlere ve ölçüm koşullarına dikkat edilmelidir."`,
-                    C: `Burak: "${c1} ile ${c2} arasında hiçbir neden-sonuç bağı yoktur ve ölçüm sonuçları birbiriyle her zaman çelişir."`,
+                    B: `Emir: "${sciVarA} incelenirken standart birimlere ve ölçüm koşullarına dikkat edilmelidir."`,
+                    C: `Burak: "${sciVarA} ile ${sciVarB} arasında hiçbir neden-sonuç bağı yoktur ve ölçüm sonuçları birbiriyle her zaman çelişir."`,
                     D: `Selin: "${topicSummary.split(".")[0]} kuralı deneysel verilerle kanıtlanabilir."`,
                     E: `Arda: "Kontrollü deneylerde her seferinde yalnızca bir bağımsız değişken değiştirilir."`
                 },
                 ans: "C",
-                sol: `1. Adım: Zeynep, Emir, Selin ve Arda'nın ifadeleri bilimsel olarak doğrudur.\n2. Adım: Burak "${c1}" ile "${c2}" arasındaki bilimsel bağıntıyı reddettiği için kavram yanılgısına düşmüştür.`
+                sol: `1. Adım: Zeynep, Emir, Selin ve Arda'nın ifadeleri bilimsel olarak doğrudur.\n2. Adım: Burak "${sciVarA}" ile "${sciVarB}" arasındaki bilimsel bağıntıyı reddettiği için kavram yanılgısına düşmüştür.`
             }
         ];
         const picked = sciArchetypes[arch % sciArchetypes.length];
