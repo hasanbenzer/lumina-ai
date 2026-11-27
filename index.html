@@ -1609,6 +1609,17 @@ html, body {
                  E. GELİŞİMİM (ÖĞRENME HAFIZASI, YANLIŞ DEFTERİM & TEKRAR PLANI)
                  ============================================================== -->
             <section class="nx-module-pane" id="pane-mind-analytics">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+                    <button class="nx-btn nx-btn-primary" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('mind-analytics')">
+                        📊 Gelişimim
+                    </button>
+                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('smart-exam')">
+                        📝 Akıllı Sınav
+                    </button>
+                    <button class="nx-btn nx-btn-outline" style="min-height:34px;font-size:0.75rem;" onclick="switchNexoraModule('study-coach')">
+                        📅 Çalışma Koçu
+                    </button>
+                </div>
                 <!-- Öğrenci Rütbesi, Yıldız Seviyesi & Günlük 5 Soru Hedef Kartı -->
                 <div id="studentRankAndDailyGoalBox" style="margin-bottom:12px;"></div>
 
@@ -1766,13 +1777,17 @@ html, body {
                 <div style="background:#F8F7FF;border:1px solid #DDD6FE;padding:10px;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
                     <div>
                         <label style="font-weight:700;display:block;margin-bottom:3px;">👤 Öğrenci Adın:</label>
-                        <input type="text" id="studentCustomNameInput" class="nx-btn nx-btn-outline" style="width:100%;background:#FFFFFF;justify-content:flex-start;" placeholder="Adını yaz..." onchange="localStorage.setItem('lumina_student_custom_name', this.value.trim())">
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="studentCustomNameInput" class="nx-btn nx-btn-outline" style="flex:1;background:#FFFFFF;justify-content:flex-start;" placeholder="Adını yaz..." onchange="saveStudentCustomName()">
+                            <button type="button" class="nx-btn nx-btn-primary" style="min-height:32px;padding:4px 10px;font-size:0.73rem;" onclick="saveStudentCustomName()">Kaydet</button>
+                        </div>
+                        <small id="studentNameSaveStatus" style="display:block;margin-top:3px;color:#059669;font-weight:700;"></small>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                         <span style="font-weight:700;">🔊 Sesli Okuma & Hız:</span>
                         <div style="display:flex;gap:5px;">
-                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="toggleAutoSpeak()">Ses Aç/Kapa</button>
-                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="cycleTtsSpeed()">Hız Değiştir</button>
+                            <button type="button" id="modalTtsToggleBtn" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="toggleAutoSpeak()">Ses Aç/Kapa</button>
+                            <button type="button" id="modalTtsSpeedBtn" class="nx-btn nx-btn-outline" style="min-height:28px;padding:3px 8px;font-size:0.72rem;" onclick="cycleTtsSpeed()">Hız Değiştir</button>
                         </div>
                     </div>
                 </div>
@@ -2847,28 +2862,39 @@ const NEXORA_CURRICULUM_FALLBACK = {
 //  konular olarak açar; böylece her derste 5-6 ünite yerine 15-30+ detaylı konu yer alır)
 // ============================================================================
 (function expandNexoraCurriculumToSubtopics() {
+    const isMeaningfulSubtopic = (str) => {
+        const cl = String(str || "").trim();
+        if (cl.length < 8 || cl.length > 68) return false;
+        // Formül parçalarını (=), tek tarihleri (21 Haziran vb.), kırık parantezleri ve tek kelimelik sıfatları ele
+        if (/[=<>]|^\d+\s*(haziran|aralık|mart|eylül|ocak|şubat|nisan|mayıs|temmuz|ağustos|ekim|kasım)$/i.test(cl)) return false;
+        if (/[()]/.test(cl) || /:\s*$/.test(cl) || /^(sabit|eldesiz|eldeli|insan|sayılabilen|more|less|was|were|did)$/i.test(cl)) return false;
+        const words = cl.split(/\s+/).filter(Boolean);
+        if (words.length < 2 && cl.length < 11) return false;
+        return true;
+    };
+
     const extractSubtopicPhrases = (unitTitle, unitSummary) => {
         const rawList = [];
-        // 1) Başlıktaki parantez içindeki alt konuları çıkar
+        // 1) Başlıktaki parantez içindeki alt konuları çıkar (Slash '/' ile bölme ki 0/0 veya Asit/Baz kırılmasın!)
         const parenMatch = String(unitTitle || "").match(/\(([^)]+)\)/);
         if (parenMatch && parenMatch[1]) {
-            parenMatch[1].split(/[,;•/]| ve /i).forEach(part => {
+            parenMatch[1].split(/[,;•]| ve /i).forEach(part => {
                 const cl = part.trim();
-                if (cl.length >= 4 && !/^\d+$/.test(cl)) rawList.push(cl);
+                if (isMeaningfulSubtopic(cl)) rawList.push(cl);
             });
         }
         // 2) Başlığın parantez dışı kısmındaki virgül veya '&' ile ayrılmış ana konuları çıkar
         const mainHeader = String(unitTitle || "").replace(/^\d+\.\s*ünite\s*:\s*/i, "").replace(/^unit\s*\d+\s*:\s*/i, "").replace(/\([^)]*\)/g, "").trim();
         mainHeader.split(/[,;&]| ve /i).forEach(part => {
             const cl = part.trim();
-            if (cl.length >= 4 && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR").includes(cl.toLocaleLowerCase("tr-TR")))) {
+            if (isMeaningfulSubtopic(cl) && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR").includes(cl.toLocaleLowerCase("tr-TR")))) {
                 rawList.push(cl);
             }
         });
-        // 3) Özetteki (summary) virgül ve noktalı virgülle ayrılmış alt başlıkları çıkar
+        // 3) Özetteki (summary) virgül ve noktalı virgülle ayrılmış temiz alt başlıkları çıkar
         String(unitSummary || "").replace(/\([^)]*\)/g, "").split(/[,;.]| ve /i).forEach(part => {
             const cl = part.trim();
-            if (cl.length >= 5 && cl.length <= 65 && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
+            if (isMeaningfulSubtopic(cl) && !rawList.some(existing => existing.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
                 rawList.push(cl);
             }
         });
@@ -2883,13 +2909,11 @@ const NEXORA_CURRICULUM_FALLBACK = {
             if (!Array.isArray(originalUnits)) return;
             const expandedTopics = [];
             originalUnits.forEach((uItem, uIdx) => {
-                // Ana Üniteyi ekle
                 expandedTopics.push(uItem);
                 const unitNumMatch = String(uItem.title || "").match(/^(\d+)\.\s*Ünite/i) || String(uItem.title || "").match(/^Unit\s*(\d+)/i);
                 const uNum = unitNumMatch ? unitNumMatch[1] : String(uIdx + 1);
                 const isEngUnit = /^Unit\s*\d+/i.test(String(uItem.title || ""));
                 const subPhrases = extractSubtopicPhrases(uItem.title, uItem.summary);
-                // Eğer en az 2 alt başlık varsa, her birini bağımsız seçilebilir alt konu olarak ekle
                 if (subPhrases.length >= 2) {
                     subPhrases.forEach((subTitle, sIdx) => {
                         const capSub = subTitle.charAt(0).toLocaleUpperCase("tr-TR") + subTitle.slice(1);
@@ -2903,12 +2927,12 @@ const NEXORA_CURRICULUM_FALLBACK = {
                             title: isEngUnit
                                 ? `Unit ${uNum}.${sIdx + 1}: ${capSub}`
                                 : `${uNum}.${sIdx + 1}. Konu: ${capSub}`,
-                            summary: `${capSub} temel kavramları, kuralları, örnek uygulamaları ve ${siblingFocus || uItem.title} ile bağlantısı. (${uItem.summary})`,
+                            summary: `${capSub} — ${uItem.summary}`,
                             difficulty: uItem.difficulty || 3,
                             content_status: "Published",
                             outcomes: [
                                 `${uItem.code}.${sIdx + 1}A: ${capSub} konusunun temel tanım, kural ve işlem basamaklarını kavrar ve uygular.`,
-                                `${uItem.code}.${sIdx + 1}B: ${capSub} ile ilgili yazılı ve sınav tarzı muhakeme sorularını adım adım çözer (${baseOutcome})`
+                                `${uItem.code}.${sIdx + 1}B: ${baseOutcome}`
                             ]
                         });
                     });
@@ -2917,42 +2941,6 @@ const NEXORA_CURRICULUM_FALLBACK = {
             gradeObj.subjects[subjName] = expandedTopics;
         });
     });
-})();
-
-// YKS 23 Branş Konu Takipçisindeki birleşik konuları da alt başlıklarına aç
-(function expandYksTrackerTopics() {
-    if (typeof LUMINA_YKS_GRADIUS_FALLBACK === "undefined" || !Array.isArray(LUMINA_YKS_GRADIUS_FALLBACK.subjects_23_tracker)) return;
-    let totalCount = 0;
-    let completedCount = 0;
-    LUMINA_YKS_GRADIUS_FALLBACK.subjects_23_tracker.forEach(subjEntry => {
-        const newTopics = [];
-        (subjEntry.topics || []).forEach(tItem => {
-            newTopics.push(tItem);
-            const rawParts = String(tItem.topic_name || "")
-                .replace(/\([^)]*\)/g, "")
-                .split(/[,;&]| ve /i)
-                .map(s => s.trim())
-                .filter(s => s.length >= 5);
-            if (rawParts.length >= 2) {
-                rawParts.forEach((part, idx) => {
-                    newTopics.push({
-                        topic_name: `↳ Alt Konu ${idx + 1}: ${part}`,
-                        status: tItem.status,
-                        solved_question_count: Math.max(10, Math.round((tItem.solved_question_count || 60) / rawParts.length)),
-                        has_recurring_alarm: idx === 0 ? Boolean(tItem.has_recurring_alarm) : false
-                    });
-                });
-            }
-        });
-        subjEntry.topics = newTopics;
-        totalCount += newTopics.length;
-        completedCount += newTopics.filter(t => t.status === "completed").length;
-    });
-    if (LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary) {
-        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.total_topics = totalCount;
-        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.completed_topics = completedCount;
-        LUMINA_YKS_GRADIUS_FALLBACK.tracker_summary.completion_pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-    }
 })();
 
 const NEXORA_EXAM_QUESTIONS_FALLBACK = [
@@ -4082,8 +4070,8 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
         </div>`;
     }
 
-    // 1F. Çember ve Daire (Açı, Kiriş, Teğet, Yay Uzunluğu, Daire Dilimi Alanı)
-    if ((t.includes("çember") || t.includes("daire")) && !t.includes("analitik")) {
+    // 1F. Çember ve Daire (Açı, Kiriş, Teğet, Yay Uzunluğu, Daire Dilimi Alanı — Fizik Çembersel Hareket Hariç!)
+    if ((t.includes("çember") || t.includes("daire")) && !t.includes("analitik") && !t.includes("çembersel hareket") && !s.includes("fizik")) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #C4B5FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#5B21B6;margin-bottom:4px;">⭕ ${cleanMainTitle} — Merkez/Çevre Açı, Teğet-Kiriş ve Daire Dilimi Alanı</div>
@@ -4394,10 +4382,11 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
     }
 
     // =========================================================================
-    // 3. FEN BİLİMLERİ, FİZİK, KİMYA, BİYOLOJİ (10 FARKLI KONUYA ÖZEL ŞEMA)
+    // 3. FEN BİLİMLERİ, FİZİK, KİMYA, BİYOLOJİ (11 FARKLI KONUYA ÖZEL ŞEMA)
     // =========================================================================
-    // 3A. Güneş Sistemi, Dünya, Ay, Mevsimlerin Oluşumu (23°27'), Tutulmalar ve Uzay
-    if (t.includes("güneş") || t.includes("dünya") || t.includes("mevsim") || t.includes("gezegen") || t.includes("tutulma") || t.includes("uzay")) {
+    // 3A. Güneş Sistemi, Dünya, Ay, Mevsimlerin Oluşumu (23°27'), Tutulmalar ve Uzay (Tarih/İnkılap "Dünya Savaşı" Hariç!)
+    const isHistoryOrVerbalSubj = s.includes("tarih") || s.includes("inkılap") || s.includes("sosyal") || s.includes("edebiyat") || s.includes("türkçe") || s.includes("felsefe") || s.includes("din");
+    if (!isHistoryOrVerbalSubj && (t.includes("güneş") || t.includes("mevsim") || t.includes("gezegen") || t.includes("tutulma") || t.includes("uzay") || (t.includes("dünya") && (s.includes("fen") || s.includes("coğrafya") || s.includes("fizik"))))) {
         return `
         <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
             <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🌍 ${cleanMainTitle} — 23°27' Eksen Eğikliği, Mevsimler ve Güneş-Dünya-Ay Sistemi</div>
@@ -4483,6 +4472,41 @@ function buildQuestionVisualSvg(subjectName, topicName, examYear, diagramIndex =
                 <rect x="281" y="84" width="28" height="22" rx="3" fill="#10B981"/>
                 <text x="295" y="99" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="bold">P</text>
                 <text x="295" y="124" text-anchor="middle" fill="#065F46" font-size="9.2" font-weight="bold">Kuvvet Kazancı = P / F = 2</text>
+            </svg>
+        </div>`;
+    }
+
+    // 3C-2. Kuvvet, Hareket (Newton F=m·a), Atışlar, İtme-Momentum, Çembersel ve Basit Harmonik Hareket
+    if (t.includes("çembersel") || t.includes("harmonik") || t.includes("kuvvet") || t.includes("hareket") || t.includes("newton") || t.includes("atış") || t.includes("momentum") || t.includes("vektör")) {
+        return `
+        <div style="background:#FFFFFF;border:1.5px solid #BAE6FD;border-radius:12px;padding:10px;margin:8px 0;text-align:center;">
+            <div style="font-size:0.72rem;font-weight:800;color:#0369A1;margin-bottom:4px;">🚀 ${cleanMainTitle} — Newton Hareket Yasası (F_net = m·a) ve Çembersel Hareket (F_m = m·v²/r)</div>
+            <svg viewBox="0 0 380 135" style="width:100%;max-width:360px;height:auto;display:block;margin:0 auto;">
+                <!-- Sol: Newton F_net = m.a -->
+                <line x1="15" y1="95" x2="185" y2="95" stroke="#475569" stroke-width="2.5"/>
+                <rect x="65" y="55" width="56" height="40" rx="5" fill="#E0F2FE" stroke="#0284C7" stroke-width="2.2"/>
+                <text x="93" y="79" text-anchor="middle" fill="#075985" font-size="11" font-weight="bold">m = 5kg</text>
+                <line x1="121" y1="75" x2="172" y2="75" stroke="#10B981" stroke-width="3"/>
+                <polygon points="172,70 182,75 172,80" fill="#10B981"/>
+                <text x="152" y="65" text-anchor="middle" fill="#047857" font-size="9.5" font-weight="bold">F₁ = 30N</text>
+                <line x1="65" y1="75" x2="25" y2="75" stroke="#DC2626" stroke-width="2.5"/>
+                <polygon points="25,70 17,75 25,80" fill="#DC2626"/>
+                <text x="42" y="65" text-anchor="middle" fill="#DC2626" font-size="9.5" font-weight="bold">f_s = 10N</text>
+                <text x="100" y="120" text-anchor="middle" fill="#0369A1" font-size="9.2" font-weight="bold">F_net = m · a ⇒ 20 = 5 · a ⇒ a = 4 m/s²</text>
+                <!-- Sağ: Düzgün Çembersel Hareket (Merkezcil Kuvvet Fm ve Çizgisel Hız v) -->
+                <circle cx="285" cy="62" r="40" fill="#FAF5FF" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,3"/>
+                <circle cx="285" cy="62" r="3.5" fill="#1E1B4B"/>
+                <text x="275" y="65" fill="#1E1B4B" font-size="9.5" font-weight="bold">O</text>
+                <circle cx="325" cy="62" r="7" fill="#7C3AED"/>
+                <!-- Merkeze doğru Fm vektörü -->
+                <line x1="318" y1="62" x2="294" y2="62" stroke="#DC2626" stroke-width="2.5"/>
+                <polygon points="294,58 287,62 294,66" fill="#DC2626"/>
+                <text x="306" y="54" text-anchor="middle" fill="#DC2626" font-size="9" font-weight="bold">F_m</text>
+                <!-- Yörüngeye teğet v hız vektörü -->
+                <line x1="325" y1="55" x2="325" y2="22" stroke="#0284C7" stroke-width="2.5"/>
+                <polygon points="321,22 325,14 329,22" fill="#0284C7"/>
+                <text x="342" y="34" fill="#0369A1" font-size="10" font-weight="bold">v ⊥ F_m</text>
+                <text x="285" y="120" text-anchor="middle" fill="#5B21B6" font-size="9.2" font-weight="bold">v = ω·r = 2πr/T • F_m = m·v²/r = m·ω²·r</text>
             </svg>
         </div>`;
     }
@@ -5115,14 +5139,14 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
     let quizList = [];
 
     if (g <= 4 && isMath) {
-        const a = 12 + (variantIdx * 5) + g * 3;
-        const b = 8 + (variantIdx * 3) + g * 2;
+        const a = 12 + ((variantIdx % 4) * 5) + g * 3;
+        const b = 8 + ((variantIdx % 4) * 3) + g * 2;
         const sum = a + b;
         const diff = a - b;
         coreRule = `**${g}. Sınıf ${subjectName} — ${topicTitle} Temel Özeti:**\n• **Konu Kapsamı:** ${topicSummary}\n• **1. Kazanım:** ${outDesc1}\n• **2. Kazanım:** ${outDesc2}`;
         storyAnalogy = `🍎 **Günlük Hayat Hikâyesi (${topicTitle}):** Kırtasiyeden **${a}** tane kırmızı kalem ve **${b}** tane mavi kalem aldığını düşün. "${mainConceptA}" kuralını uygularken nesneleri gruplayarak (${Math.floor(sum / 10)} Onluk ve ${sum % 10} Birlik = ${sum}) çok hızlı sonuca ulaşırız!`;
-        workedExample = `• **Adım Adım Örnek (${topicTitle}):** Ayşe'nin **${a}** cevizi vardı, **${b}** ceviz daha topladı.\n• **1. Adım (${outDesc1}):** \`${a} + ${b}\` işlemini basamaklarına göre topluyoruz.\n• **2. Adım (${outDesc2}):** Toplam \`${a} + ${b} = ${sum}\` bulunur. Farkı sorulsaydı \`${a} - ${b} = ${diff}\` olurdu!`;
-        examSecret = `🔑 **${g}. Sınıf Sınav Şifresi (${topicTitle}):** Soruda **${mainConceptA}** sorulurken *"toplam, birlikte, fazlası"* diyorsa **Toplama (+)**; *"geriye kalan, farkı, eksiği"* diyorsa **Çıkarma (-)** yapılır!`;
+        workedExample = `• **1. Çözümlü Örnek (Temel Seviye — ${topicTitle}):** Ayşe'nin **${a}** cevizi vardı, **${b}** ceviz daha topladı.\n  - **1. Adım (${outDesc1}):** \`${a} + ${b}\` işlemini basamaklarına (birlikler ve onluklar) göre topluyoruz.\n  - **2. Adım (${outDesc2}):** Toplam \`${a} + ${b} = ${sum}\` bulunur. İki sayı arasındaki fark ("kaç fazladır?") sorulsaydı \`${a} - ${b} = ${diff}\` olurdu!`;
+        examSecret = `🔑 **${g}. Sınıf Sınav Şifresi (${topicTitle}):** Soruda *"toplam kaç oldu, birlikte kaçtır, ... fazlası kaçtır"* diyorsa **Toplama (+)**; *"geriye kaç kaldı, farkı kaçtır, biri diğerinden kaç fazladır / eksiktir"* diyorsa **Çıkarma (-)** yapılır!`;
 
         writtenQuestions = [
             {
@@ -5593,31 +5617,123 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
                 };
             }
         }
-        // 7) ÇARPANLAR VE KATLAR (EBOB-EKOK), ÜSLÜ VE KAREKÖKLÜ İFADELER (6-9. Sınıf)
-        else if (low.includes("çarpan") || low.includes("ebob") || low.includes("ekok") || low.includes("üslü") || low.includes("karekök") || low.includes("köklü") || low.includes("bölünebilme")) {
-            const n1 = 24;
-            const n2 = 36;
-            workedExample = `• **Adım Adım EBOB-EKOK & Köklü Sayı Örneği (${topicTitle}):**\n` +
-                `  - **EBOB(24, 36):** İkisini de tam bölen en büyük sayı = **12**; **EKOK(24, 36)** = **72**.\n` +
-                `  - **Kareköklü Toplama:** \`√108 + √75 = √(36·3) + √(25·3) = 6√3 + 5√3 = 11√3\`.`;
+        // 7A) ÇARPANLAR VE KATLAR, ASAL ÇARPANLAR, EBOB-EKOK VE BÖLÜNEBİLME (6-9. Sınıf)
+        else if (low.includes("çarpan") || low.includes("ebob") || low.includes("ekok") || low.includes("asal") || low.includes("bölünebilme")) {
+            const stepA = 12 + (variantIdx % 3) * 6; // 12, 18, 24
+            const stepB = 18 + (variantIdx % 3) * 6; // 18, 24, 30
+            const gcdHelper = (x, y) => (!y ? x : gcdHelper(y, x % y));
+            const ebobVal = gcdHelper(stepA, stepB);
+            const ekokVal = (stepA * stepB) / ebobVal;
+            const totalPieces = (stepA / ebobVal) + (stepB / ebobVal);
+
+            workedExample = `• **1. Çözümlü Örnek (Temel Seviye — Asal Çarpanlar & EBOB-EKOK):**\n` +
+                `  Uzunlukları **${stepA} m** ve **${stepB} m** olan iki ip hiç artmayacak şekilde eşit ve en büyük uzunlukta parçalara ayrılacaktır:\n` +
+                `  - **1. Adım (EBOB):** İkisini de tam bölen en büyük sayı \`EBOB(${stepA}, ${stepB}) = ${ebobVal} metre\` (bir parçanın boyu).\n` +
+                `  - **2. Adım (Parça Sayısı & EKOK):** Toplam parça sayısı = \`${stepA}/${ebobVal} + ${stepB}/${ebobVal} = ${totalPieces} parça\`; en küçük ortak katları ise \`EKOK(${stepA}, ${stepB}) = ${ekokVal}\` bulunur.`;
 
             mQ1 = {
-                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Uzunlukları ${n1} m ve ${n2} m olan iki kumaş hiç artmayacak şekilde eşit ve en büyük uzunlukta parçalara ayrılacaktır. Bir parçanın uzunluğu (EBOB) kaç metre olur?`,
-                opts: { A: "6", B: "8", C: "12", D: "18", E: "24" },
-                ans: "C",
-                sol: `1. Adım: Bütünden eş parçalara ayrıldığı için EBOB(24, 36) bulunur.\n2. Adım: 24 ve 36'yı bölen en büyük doğal sayı 12 metredir (C).`
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Uzunlukları ${stepA} m ve ${stepB} m olan iki kumaş hiç artmayacak biçimde eşit ve en büyük uzunlukta parçalara ayrılacaktır. Bir parçanın uzunluğu (EBOB) kaç metre ve elde edilen toplam parça sayısı kaçtır?`,
+                opts: {
+                    A: `Parça Boyu = ${ebobVal} m — Toplam = ${totalPieces} Parça`,
+                    B: `Parça Boyu = ${ebobVal / 2} m — Toplam = ${totalPieces * 2} Parça`,
+                    C: `Parça Boyu = ${ekokVal} m — Toplam = ${totalPieces} Parça`,
+                    D: `Parça Boyu = ${ebobVal} m — Toplam = ${totalPieces + 2} Parça`,
+                    E: `Parça Boyu = ${stepA} m — Toplam = 2 Parça`
+                },
+                ans: "A",
+                sol: `1. Adım: Bütünden eş parçalara ayrıldığı için EBOB(${stepA}, ${stepB}) = ${ebobVal} metre bulunur.\n2. Adım: Toplam parça sayısı = (${stepA} / ${ebobVal}) + (${stepB} / ${ebobVal}) = ${totalPieces} parçadır.`
             };
             mQ2 = {
-                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) √108 + √75 - √27 işleminin sonucu aşağıdakilerden hangisidir?`,
-                opts: { A: "6√3", B: "8√3", C: "9√3", D: "11√3", E: "14√3" },
-                ans: "B",
-                sol: `1. Adım: √108 = 6√3, √75 = 5√3 ve √27 = 3√3 şeklinde a√b formuna dönüştürülür.\n2. Adım: 6√3 + 5√3 - 3√3 = (6 + 5 - 3)√3 = 8√3 bulunur (B).`
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) 72 sayısının asal çarpanlarının çarpımı biçiminde yazılışı ve pozitif tam sayı çarpanlarının (bölenlerinin) sayısı aşağıdakilerden hangisinde doğru verilmiştir?`,
+                opts: {
+                    A: "2³ · 3² — 12 tane pozitif böleni vardır",
+                    B: "2² · 3³ — 9 tane pozitif böleni vardır",
+                    C: "2³ · 3¹ — 8 tane pozitif böleni vardır",
+                    D: "2⁴ · 3² — 15 tane pozitif böleni vardır",
+                    E: "2² · 3² — 6 tane pozitif böleni vardır"
+                },
+                ans: "A",
+                sol: `1. Adım: 72 = 8 × 9 = 2³ · 3² şeklinde asal çarpanlarına ayrılır.\n2. Adım: Pozitif bölen sayısı üslerin 1 fazlası çarpılarak bulunur: (3 + 1) × (2 + 1) = 4 × 3 = 12 tanedir.`
             };
             mQ3 = {
-                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) 2⁵ · 2³ ÷ 2⁴ üslü ifadesinin değeri kaçtır?`,
-                opts: { A: "8", B: "16", C: "32", D: "64", E: "128" },
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Bir duraktan her 15 dakikada bir A otobüsü, her 20 dakikada bir B otobüsü kalkmaktadır. İki otobüs ilk kez saat 08.00'de birlikte hareket ettiğine göre, ikinci kez saat kaçta birlikte hareket ederler?`,
+                opts: { A: "08.35", B: "08.45", C: "09.00", D: "09.15", E: "09.30" },
+                ans: "C",
+                sol: `1. Adım: Parçadan ortak bir buluşma zamanına gidildiği için EKOK(15, 20) = 60 dakika (1 saat) bulunur.\n2. Adım: 08.00 + 60 dakika = 09.00'da ikinci kez birlikte hareket ederler.`
+            };
+        }
+        // 7B) ÜSLÜ İFADELER VE BİLİMSEL GÖSTERİM (5-9. Sınıf)
+        else if (low.includes("üslü") || low.includes("bilimsel gösterim")) {
+            const pA = 5 + (variantIdx % 3);
+            const pB = 3;
+            const pC = 4;
+            const resExp = pA + pB - pC;
+            const resVal = Math.pow(2, resExp);
+            workedExample = `• **1. Çözümlü Örnek (Temel Seviye — Üslü İfadelerde Çarpma ve Bölme):**\n` +
+                `  \`2^${pA} · 2^${pB} ÷ 2^${pC}\` işleminin sonucunu bulalım:\n` +
+                `  - **1. Adım (Üs Kuralları):** Tabanlar aynıyken çarpmada üsler toplanır, bölmede çıkarılır: \`2^(${pA} + ${pB} - ${pC}) = 2^${resExp}\`.\n` +
+                `  - **2. Adım (Değer):** \`2^${resExp} = ${resVal}\` bulunur.`;
+
+            mQ1 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) 2^${pA} · 2³ ÷ 2⁴ üslü ifadesinin sonucu kaçtır?`,
+                opts: { A: String(resVal / 2), B: String(resVal), C: String(resVal * 2), D: String(resVal * 4), E: String(resExp) },
                 ans: "B",
-                sol: `1. Adım: Tabanlar aynıyken çarpmada üsler toplanır, bölmede çıkarılır: 2^(5 + 3 - 4) = 2⁴.\n2. Adım: 2⁴ = 16 bulunur (B).`
+                sol: `1. Adım: Tabanlar aynıyken çarpmada üsler toplanır, bölmede çıkarılır: 2^(${pA} + 3 - 4) = 2^${resExp}.\n2. Adım: 2^${resExp} = ${resVal} bulunur.`
+            };
+            mQ2 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) 45.000.000 sayısının bilimsel gösterimi (1 ≤ |a| < 10 olmak üzere a × 10ⁿ) aşağıdakilerden hangisidir?`,
+                opts: { A: "45 × 10⁶", B: "4,5 × 10⁷", C: "0,45 × 10⁸", D: "4,5 × 10⁶", E: "4,5 × 10⁸" },
+                ans: "B",
+                sol: `1. Adım: Bilimsel gösterimde katsayı 1 ile 10 arasında olmalıdır: a = 4,5.\n2. Adım: Virgül 7 basamak sola kaydırıldığı için 4,5 × 10⁷ olarak yazılır.`
+            };
+            mQ3 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) (-3)² + (-2)³ - 5⁰ işleminin sonucu kaçtır?`,
+                opts: { A: "-2", B: "0", C: "2", D: "16", E: "18" },
+                ans: "B",
+                sol: `1. Adım: (-3)² = +9 (çift kuvvet pozitif), (-2)³ = -8 (tek kuvvet negatif) ve 5⁰ = 1'dir.\n2. Adım: 9 + (-8) - 1 = 1 - 1 = 0 bulunur.`
+            };
+        }
+        // 7C) KAREKÖKLÜ İFADELER VE KÖKLÜ SAYILAR (8-9. Sınıf)
+        else if (low.includes("karekök") || low.includes("köklü")) {
+            const kMult = 2 + (variantIdx % 3); // 2, 3, 4
+            const rad1 = 36 * 3; // 108 -> 6√3
+            const rad2 = 25 * 3; // 75  -> 5√3
+            const rad3 = (kMult * kMult) * 3; // kMult√3
+            const coefSum = 6 + 5 - kMult;
+            workedExample = `• **1. Çözümlım Örnek (Temel Seviye — a√b Dönüşümü ve Kareköklü İşlem):**\n` +
+                `  \`√108 + √75 - √${rad3}\` işlemini adım adım çözelim:\n` +
+                `  - **1. Adım (a√b Formu):** \`√108 = √(36·3) = 6√3\`, \`√75 = √(25·3) = 5√3\` ve \`√${rad3} = ${kMult}√3\`.\n` +
+                `  - **2. Adım (Katsayı Toplamı):** \`(6 + 5 - ${kMult})√3 = ${coefSum}√3\` bulunur.`;
+
+            mQ1 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) √108 + √75 - √${rad3} işleminin sonucu aşağıdakilerden hangisidir?`,
+                opts: { A: `${coefSum - 2}√3`, B: `${coefSum}√3`, C: `${coefSum + 1}√3`, D: `11√3`, E: `${coefSum + 3}√3` },
+                ans: "B",
+                sol: `1. Adım: √108 = 6√3, √75 = 5√3 ve √${rad3} = ${kMult}√3 şeklinde a√b formuna dönüştürülür.\n2. Adım: (6 + 5 - ${kMult})√3 = ${coefSum}√3 bulunur.`
+            };
+            mQ2 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Alanı 144 cm² olan kare şeklindeki bir bahçenin bir kenar uzunluğu kaç cm ve çevresi kaç cm'dir?`,
+                opts: {
+                    A: "Bir kenarı = 12 cm — Çevresi = 48 cm",
+                    B: "Bir kenarı = 14 cm — Çevresi = 56 cm",
+                    C: "Bir kenarı = 12 cm — Çevresi = 24 cm",
+                    D: "Bir kenarı = 36 cm — Çevresi = 144 cm",
+                    E: "Bir kenarı = 16 cm — Çevresi = 64 cm"
+                },
+                ans: "A",
+                sol: `1. Adım: Alanı 144 cm² olan karenin bir kenarı a = √144 = 12 cm'dir.\n2. Adım: Karenin çevresi = 4 × 12 = 48 cm bulunur.`
+            };
+            mQ3 = {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle}) √53 sayısı sayı doğrusunda hangi iki ardışık tam sayı arasında yer alır ve hangisine daha yakındır?`,
+                opts: {
+                    A: "6 ile 7 arasında — 7'ye daha yakın",
+                    B: "7 ile 8 arasında — 7'ye daha yakın (√49 = 7)",
+                    C: "7 ile 8 arasında — 8'e daha yakın (√64 = 8)",
+                    D: "8 ile 9 arasında — 8'e daha yakın",
+                    E: "5 ile 6 arasında — 5'e daha yakın"
+                },
+                ans: "B",
+                sol: `1. Adım: 49 < 53 < 64 olduğundan √49 (7) < √53 < √64 (8) aralığındadır.\n2. Adım: 53 sayısı 49'a (4 birim fark) 64'ten (11 birim fark) daha yakın olduğu için 7'ye daha yakındır.`
             };
         }
         // 8) KESİRLER, RASYONEL SAYILAR, ONDALIK GÖSTERİM, YÜZDELER VE ORAN-ORANTI (5-7. Sınıf)
@@ -6500,200 +6616,299 @@ function buildGradeTopicLearningStudioData(grade, subjectName, topicObj, variant
         ];
     }
 
-    const flashcards = [
-        {
-            card_no: 1,
-            tag: "📌 Temel Kural & Tanım",
-            front_question: `${g}. Sınıf ${subjectName} — "${topicTitle}" konusunun en temel kuralı ve özü nedir?`,
-            back_answer: coreRule.replace(/[*`]/g, "")
-        },
-        {
-            card_no: 2,
-            tag: "🔑 10 Saniyelik Sınav Şifresi",
-            front_question: `"${topicTitle}" sorularında sınavda zaman kazandıran pratik şifre ve dikkat edilecek nokta nedir?`,
-            back_answer: examSecret.replace(/[*`]/g, "")
-        },
-        {
-            card_no: 3,
-            tag: "💡 Günlük Hayat & Hikâye Modeli",
-            front_question: `"${topicTitle}" konusunu günlük hayattan bir örnekle nasıl aklımızda tutabiliriz?`,
-            back_answer: storyAnalogy.replace(/[*`]/g, "")
-        },
-        {
-            card_no: 4,
-            tag: "🎯 MEB Kazanım & Yazılı Odağı",
-            front_question: `MEB Ortak Yazılı ve sınavlarda "${topicTitle}" ünitesinden hangi kazanım ölçülür?`,
-            back_answer: outcomes.join(" • ")
-        }
-    ];
-
     // =========================================================================
-    // 📖 DERS KİTABI DERİNLİĞİNDE DETAYLI KONU ANLATIMI (4 BÖLÜMLÜ TAM DERS)
-    // VE HER KONU İÇİN 5 FARKLI TİPTE ZENGİN, PARAMETRİK SORU HAVUZU
+    // 📖 DERS KİTABI DERİNLİĞİNDE DETAYLI KONU ANLATIMI (TEMEL BİLGİLER + 4 BÖLÜM)
+    // VE HER KONU İÇİN 5 FARKLI TİPTE ZENGİN, YAŞ SEVİYESİNE UYGUN SORU HAVUZU
     // =========================================================================
     const allSubConcepts = [];
     const titleParen = String(topicTitle || "").match(/\(([^)]+)\)/);
     if (titleParen && titleParen[1]) {
-        titleParen[1].split(/[,;•/]| ve /i).forEach(s => {
+        titleParen[1].split(/[,;•]| ve /i).forEach(s => {
             const cl = s.trim();
-            if (cl.length >= 3) allSubConcepts.push(cl);
+            if (cl.length >= 4 && !/[()]/.test(cl)) allSubConcepts.push(cl);
         });
     }
     summaryConcepts.forEach(s => {
         const cl = s.replace(/\([^)]*\)/g, "").trim();
-        if (cl.length >= 4 && !allSubConcepts.some(e => e.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
+        if (cl.length >= 4 && !/[()]/.test(cl) && !allSubConcepts.some(e => e.toLocaleLowerCase("tr-TR") === cl.toLocaleLowerCase("tr-TR"))) {
             allSubConcepts.push(cl);
         }
     });
     while (allSubConcepts.length < 4) {
         if (allSubConcepts.length === 0) allSubConcepts.push(mainConceptA);
         else if (allSubConcepts.length === 1) allSubConcepts.push(mainConceptB);
-        else if (allSubConcepts.length === 2) allSubConcepts.push(`${topicTitle} Temel Uygulamaları`);
-        else allSubConcepts.push(`${topicTitle} Sınav ve Muhakeme Yorumu`);
+        else if (allSubConcepts.length === 2) allSubConcepts.push(`${topicTitle} Uygulamaları`);
+        else allSubConcepts.push(`${topicTitle} Problem ve Soru Çözümü`);
     }
 
-    const subConceptsBreakdownMd = allSubConcepts.slice(0, 5).map((sc, idx) => {
-        const relOutcome = cleanOutcomeText(outcomes[idx % outcomes.length] || topicSummary);
+    // 🧱 0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Öğrencinin konuyu sıfırdan anlaması için gerekli altyapı)
+    let foundationalBasicsMd = "";
+    if (g <= 4) {
         if (isMath) {
-            return `• **${idx + 1}. Alt Başlık — ${sc}:** Bu kavramda verilen sayısal veya geometrik büyüklükler standart formüle dönüştürülür. İşlem önceliği, birim uyumu ve işaret kontrolü yapılarak *("${relOutcome}")* kazanımı adım adım uygulanır.`;
+            foundationalBasicsMd =
+                `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Başlamadan Önce Hatırlayalım)**\n` +
+                `• **Rakam ve Basamak Nedir?** Sayıları yazmak için kullandığımız \`0, 1, 2, 3, 4, 5, 6, 7, 8, 9\` sembollerine **rakam** denir. İki basamaklı bir sayıda sağdaki rakam **Birler Basamağı** (1'er 1'er), soldaki rakam **Onlar Basamağı** (10'ar 10'ar) değerindedir.\n` +
+                `• **İşlem Sembollerimiz:** Artma ve birleştirme için **Toplama (\`+\`)**, azalma ve fark bulma için **Çıkarma (\`-\`)**, eşit grupları tekrarlı toplama için **Çarpma (\`×\`)**, eşit paylaştırma için **Bölme (\`÷\`)** kullanırız.`;
+        } else if (isTr) {
+            foundationalBasicsMd =
+                `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Başlamadan Önce Hatırlayalım)**\n` +
+                `• **Alfabemiz ve Harflerimiz:** Türk alfabesinde **29 harf** vardır (*A, B, C, Ç, D, E, F, G, Ğ, H, I, İ, J, K, L, M, N, O, Ö, P, R, S, Ş, T, U, Ü, V, Y, Z*). Bunların **8 tanesi ünlü (sesli)** harf (*a, e, ı, i, o, ö, u, ü*), **21 tanesi ünsüz (sessiz)** harftir.\n` +
+                `• **Hece, Kelime ve Cümle:** Ağzımızın bir hareketiyle çıkan sese **hece** denir. Bir kelimedeki ünlü harf sayısı kadar hece vardır (Örn: *O-KUL* → 2 ünlü harf = 2 hece). Cümleler हमेशा **büyük harfle** başlar ve sonuna uygun noktalama işareti (\`.\`, \`?\`, \`!\`) konur.`;
+        } else if (isEng) {
+            foundationalBasicsMd =
+                `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (English Basics)**\n` +
+                `• **Temel Selamlaşma & Zamirler:** İngilizcede kendimizden bahsederken **I (Ben)**, karşımızdakine **You (Sen/Siz)**, erkekler için **He**, kızlar için **She**, cansız/hayvanlar için **It** kullanırız.\n` +
+                `• **Soru ve Cevap Kuralı:** *"What is this?"* (Bu nedir?) → *"It is a ..."*, *"How are you?"* (Nasılsın?) → *"I am fine, thank you."*`;
+        } else {
+            foundationalBasicsMd =
+                `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Başlamadan Önce Hatırlayalım)**\n` +
+                `• **Temel Kavram:** Günlük hayatımızda evde, okulda ve doğada kurallara uymak, canlıları ve çevremizi tanımak hem güvenliğimizi sağlar hem de birlikte mutlu yaşamamıza yardımcı olur.\n` +
+                `• **Nasıl Öğreneceğiz?** Bu konuda **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramlarını kendi yaşantımızdan örneklerle adım adım öğreneceğiz.`;
+        }
+    } else if (isMath) {
+        foundationalBasicsMd =
+            `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Konunun Matematiksel Altyapısı)**\n` +
+            `• **İşlem Önceliği ve İşaret Kuralları:** Her matematik probleminde önce **Üslü İfadeler**, sonra **Parantez İçi**, ardından **Çarpma/Bölme** ve en son **Toplama/Çıkarma** yapılır. Aynı işaretli iki sayının çarpımı/bölümü **pozitif (\`+\`)**, zıt işaretlilerin çarpımı/bölümü **negatif (\`-\`)** olur.\n` +
+            `• **Bu Konunun Temel Yapı Taşları:** **${topicTitle}** konusunu tam kavramak için **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** tanımlarını bilmeli; verilen sözel veya şekilli ifadeyi önce matematiksel eşitliğe (denkleme/formüle) dönüştürmeliyiz.`;
+    } else if (isSci) {
+        foundationalBasicsMd =
+            `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Bilimsel Altyapı & Değişkenler)**\n` +
+            `• **Temel Bilimsel Kavramlar ve Birimler:** Fen ve doğa bilimlerinde her büyüklük standart birimiyle (Kütle: \`kg/g\`, Kuvvet: \`Newton (N)\`, Enerji: \`Joule (J)\`, Basınç: \`Pascal (Pa)\`, Gerilim: \`Volt (V)\`) ve korunum yasalarıyla (kütle/enerji korunumu) incelenir.\n` +
+            `• **Deney Düzeneklerini Okuma Kuralı:** Bir deneyde araştırmacının kendi değiştirdiği etkene **Bağımsız Değişken**, buna bağlı olarak değişen sonuca **Bağımlı Değişken**, sabit tutulanlara ise **Kontrol Edilen Değişken** denir. Bu ünitede temel odağımız **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** ilkeleridir.`;
+    } else if (isTr) {
+        foundationalBasicsMd =
+            `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Dil ve Anlam Altyapısı)**\n` +
+            `• **Bağlam İlkesi:** Türkçede ve edebiyatta bir sözcüğün veya cümlenin görevi tek başına değil, kullanıldığı cümlenin (bağlamın) içinde kazanıldığı anlamla belirlenir.\n` +
+            `• **Kök, Ek ve Yüklem Kontrolü:** Dil bilgisi ve anlam sorularında önce cümlenin **Yüklemini** (temel yargısını) bulmak, sözcükleri **İsim (Ad)** veya **Fiil (Eylem)** kökü olarak ayırmak **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** konularını hatasız çözmenin anahtarıdır.`;
+    } else if (isEng) {
+        foundationalBasicsMd =
+            `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Core Grammar & Sentence Structure)**\n` +
+            `• **İngilizce Cümle Dizilişi:** İngilizcede kurallı bir cümle **Subject (Özne) + Auxiliary/Verb (Yardımcı Fiil / Yüklem) + Object (Nesne) + Place/Time (Yer ve Zaman)** sırasıyla kurulur.\n` +
+            `• **Ünite Anahtarı:** **${topicTitle}** ünitesinde cümle kurarken ve diyalogları çözerken **${allSubConcepts[0]}** ile **${allSubConcepts[1]}** kalıplarına ve zaman ifadelerine dikkat edilir.`;
+    } else {
+        foundationalBasicsMd =
+            `🧱 **0. BÖLÜM: TEMEL BİLGİLER & ÖN HAZIRLIK (Kavramsal Çerçeve & Kronoloji/Harita Okuma)**\n` +
+            `• **Neden-Sonuç ve Dönem/Mekân İlkesi:** ${subjectName} dersinde olaylar ve kavramlar tek başına ezberlenmez; meydana geldiği dönemin şartları, coğrafi/toplumsal ortamı ve **Neden → Gelişme → Sonuç** zinciri içinde değerlendirilir.\n` +
+            `• **Temel Kavramlar:** Bu konuda özellikle **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramlarının tanımlarını ve birbirleriyle olan ilişkisini bilmek gerekir.`;
+    }
+
+    const subConceptsBreakdownMd = allSubConcepts.slice(0, 4).map((sc, idx) => {
+        const relOutcome = cleanOutcomeText(outcomes[idx % outcomes.length] || topicSummary);
+        if (g <= 4) {
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Günlük hayattan somut örneklerle **${sc}** kuralını öğrenir ve uygularız *(${relOutcome})*.`;
+        }
+        if (isMath) {
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Verilen sayısal veya geometrik değerler **${sc}** kuralına yerleştirilir, işlem basamakları sırasıyla uygulanarak sonuca ulaşılır *(${relOutcome})*.`;
         }
         if (isSci) {
-            return `• **${idx + 1}. Alt Başlık — ${sc}:** Bu bilimsel kavramda sistemin fiziksel, kimyasal veya biyolojik değişimi neden-sonuç ilişkisiyle incelenir. Kontrollü deneylerde bağımsız değişken olarak **${sc}** değiştirildiğinde sistemin tepkisi *("${relOutcome}")* kuralına göre analiz edilir.`;
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Sistemdeki fiziksel, kimyasal veya biyolojik etkileşimde **${sc}** faktörünün etkisi formül, grafik ve gözlem verileriyle açıklanır *(${relOutcome})*.`;
         }
         if (isTr) {
-            return `• **${idx + 1}. Alt Başlık — ${sc}:** Metin ve cümle düzeyinde **${sc}** incelenirken sözcüğün veya yargının tek başına anlamına değil, bağlam içinde üstlendiği göreve bakılır *("${relOutcome}")*.`;
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Cümle ve metin içinde **${sc}** özelliği incelenirken sözcüğün aldığı ekler ve cümlenin anlam bütünlüğü esas alınır *(${relOutcome})*.`;
         }
         if (isEng) {
-            return `• **${idx + 1}. Sub-Topic — ${sc}:** Focuses on communicative context, key vocabulary, and grammar patterns in dialogues and reading texts *("${relOutcome}")*.`;
+            return `• **${idx + 1}. Alt Başlık — ${sc}:** Diyalog ve okuma parçalarında **${sc}** kelime ve dilbilgisi kalıplarını doğru bağlamda kullanmayı sağlar *(${relOutcome})*.`;
         }
-        return `• **${idx + 1}. Alt Başlık — ${sc}:** Tarihsel, coğrafi, felsefi veya toplumsal bağlamda **${sc}** kavramının nedenleri ve sonuçları kanıtlara dayanarak çözümlenir *("${relOutcome}")*.`;
+        return `• **${idx + 1}. Alt Başlık — ${sc}:** **${sc}** gelişmesinin tarihsel, coğrafi, felsefi veya toplumsal nedenleri ve sonuçları belgelerle yorumlanır *(${relOutcome})*.`;
     }).join("\n");
 
-    const commonTrapsMd = isMath
-        ? `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
-          `1. **İşaret ve Parantez Hatası:** Denklemlerde veya cebirsel ifadelerde eksi \`(-)\` işaretini parantez içine dağıtırken ikinci terimin işaretini değiştirmeyi unutmak.\n` +
-          `2. **Birim ve İstisna Tuzağı:** Soruda verilen birimler (\`cm - m\`, \`dakika - saat\`) farklıyken dönüşüm yapmadan işlem yapmak veya soru kökündeki *"en az, en çok, tam sayı"* şartını gözden kaçırmak.`
-        : (isSci
+    const commonTrapsMd = g <= 4
+        ? `⚠️ **Dikkat Edelim! (${g}. Sınıf Püf Noktaları — ${topicTitle}):**\n` +
+          `1. **Soruyu Sonuna Kadar Oku:** Sorunun sonunda *"hangisi doğrudur?"* mu yoksa *"hangisi yanlıştır?"* mı yazıyor, mutlaka dikkat et!\n` +
+          `2. **Adım Adım Kontrol Et:** ${isMath ? "Toplama ve çıkarma yaparken birlikleri birliklerle, onlukları onluklarla hizalamayı unutma!" : "Kelimelerin harf ve hece sırasını, cümlenin başındaki büyük harfi ve sonundaki noktalama işaretini kontrol et!"}`
+        : (isMath
             ? `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
-              `1. **Değişkenleri Karıştırma Tuzağı:** Kontrollü deney sorularında araştırmacının kendi değiştirdiği değişken (**Bağımsız Değişken**) ile bunun sonucunda etkilenen değişkeni (**Bağımlı Değişken**) ters almak.\n` +
-              `2. **Grafik ve Birim Yanılgısı:** Grafiklerin sıfırdan mı yoksa belirli bir başlangıç değerinden mi başladığına dikkat etmemek.`
-            : `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
-              `1. **Öncül Dışına Çıkma Tuzağı:** Paragraf, harita veya öncül sorularında kendi genel kültür bilgini katarak *"Bu da doğrudur"* demek! Her zaman yalnızca verilen metin/harita sınırları içinde kal.\n` +
-              `2. **Soru Kökü Yanılgısı:** *"Değildir, ulaşılamaz, çıkarılamaz, yanlıştır"* gibi olumsuz soru köklerini hızlı okurken olumlu sanmak.`);
+              `1. **İşaret ve Parantez Hatası:** Denklemlerde veya cebirsel ifadelerde eksi \`(-)\` işaretini parantez içine dağıtırken ikinci terimin işaretini değiştirmeyi unutmak.\n` +
+              `2. **Birim ve İstisna Tuzağı:** Soruda verilen birimler (\`cm - m\`, \`dakika - saat\`) farklıyken dönüşüm yapmadan işlem yapmak veya soru kökündeki *"en az, en çok, tam sayı"* şartını gözden kaçırmak.`
+            : (isSci
+                ? `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
+                  `1. **Formül ve Birim Yanılgısı:** Grafiklerin sıfırdan mı yoksa belirli bir başlangıç değerinden mi başladığına ve birimlerin (\`g/kg\`, \`cm/m\`, \`s/dk\`) standart olup olmadığına dikkat etmemek.\n` +
+                  `2. **Değişkenleri Karıştırma Tuzağı:** Deney sorularında araştırmacının değiştirdiği değişken (**Bağımsız**) ile sonuçta etkilenen değişkeni (**Bağımlı**) ters almak.`
+                : `⚠️ **Sık Yapılan Hatalar & Sınav Tuzakları (${topicTitle}):**\n` +
+                  `1. **Metin/Öncül Dışına Çıkma Tuzağı:** Soruda verilen metnin veya öncülün dışına çıkıp kendi yorumunu katmak! Her zaman yalnızca verilen metin sınırları içinde kal.\n` +
+                  `2. **Olumsuz Soru Kökü Yanılgısı:** *"Değildir, ulaşılamaz, çıkarılamaz, yanlıştır"* gibi olumsuz soru köklerini hızlı okurken olumlu sanmak.`));
 
     const outcomesDetailedMd = outcomes.map((o, i) => `  ${i + 1}. ${cleanOutcomeText(o)}`).join("\n");
 
-    // Zenginleştirilmiş coreRule (Ders Kitabı Derinliğinde 4 Bölümlü Konu Anlatımı)
     const detailedCoreRule =
-        `📘 **1. BÖLÜM: KONUNUN DETAYLI TANIMI VE KAPSAMI (${topicTitle})**\n` +
-        `• **Ünite / Konu Özü:** ${topicSummary}\n` +
-        `• **Temel İlke:** Bu konuda **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramları birbiriyle doğrudan bağlantılıdır. Konuyu tam öğrenmek için tanımı ezberlemek yerine kuralların hangi koşulda nasıl uygulandığını adım adım takip etmeliyiz.\n\n` +
+        `${foundationalBasicsMd}\n\n` +
+        `📘 **1. BÖLÜM: KONUNUN DETAYLI ANLATIMI VE TEMEL KURALLARI (${topicTitle})**\n` +
+        `${coreRule}\n` +
+        `• **Konunun Özü ve Kuralları:** ${topicSummary}\n\n` +
         `📗 **2. BÖLÜM: ALT BAŞLIKLAR VE KAVRAM REHBERİ**\n` +
         `${subConceptsBreakdownMd}\n\n` +
-        `🎯 **3. BÖLÜM: MEB MÜFREDAT KAZANIMLARI VE ÖLÇME HEDEFLERİ**\n` +
+        `🎯 **3. BÖLÜM: MEB MÜFREDAT KAZANIMLARI**\n` +
         `${outcomesDetailedMd}\n\n` +
         `${commonTrapsMd}`;
 
-    // Zenginleştirilmiş workedExample (Tek örnek yerine 3 Aşamalı: Kolay • Orta • Sınav Tarzı Çözümlü Örnek!)
-    const exSeedNum1 = 15 + (variantIdx % 6) * 5;
-    const exSeedNum2 = 25 + (variantIdx % 4) * 5;
-    const secondExampleMd = isMath
-        ? `• **2. Çözümlü Örnek (Orta Seviye — ${allSubConcepts[1]} Uygulaması):**\n` +
-          `  - **Soru:** "${allSubConcepts[0]}" ve "${allSubConcepts[1]}" kurallarına göre; başlangıç değeri **${exSeedNum1}** birim olan bir modelde değişim miktarı **${exSeedNum2}** birim olarak ölçülüyor. Toplam değerin yarısının \`5\` fazlası kaçtır?\n` +
-          `  - **1. Adım:** Önce toplam değeri bulalım: \`${exSeedNum1} + ${exSeedNum2} = ${exSeedNum1 + exSeedNum2}\` birim.\n` +
-          `  - **2. Adım:** Yarısının 5 fazlası: \`(${exSeedNum1 + exSeedNum2} ÷ 2) + 5 = ${(exSeedNum1 + exSeedNum2) / 2} + 5 = ${(exSeedNum1 + exSeedNum2) / 2 + 5}\` bulunur ✔`
-        : `• **2. Çözümlü Örnek (Orta Seviye — Öncüllü Kavram Analizi):**\n` +
-          `  - **Örnek Durum:** Bir öğrenci **${allSubConcepts[0]}** ve **${allSubConcepts[1]}** kavramlarını karşılaştırırken; *"I. ${outDesc1}"* ve *"II. ${outDesc2}"* tespitlerini yapıyor.\n` +
-          `  - **Çözüm Adımı:** Her iki tespit de **${topicTitle}** ünitesinin temel kazanımlarını doğruladığı için **I ve II** birlikte doğrudur ✔`;
+    const exSeedNum1 = 10 + (variantIdx % 4) * 4;
+    const exSeedNum2 = 14 + (variantIdx % 3) * 4;
+    const secondExampleMd = (g <= 4 && !isMath)
+        ? `• **2. Çözümlü Örnek (Uygulama — ${allSubConcepts[0]}):**\n` +
+          `  - **Soru:** "${topicTitle}" konusuna göre **${allSubConcepts[0]}** kuralını günlük bir cümlede veya örnekte nasıl uygularız?\n` +
+          `  - **Çözüm:** "${outDesc1}" kuralına göre doğru yazım ve anlam sırasını takip ederek örneğimizi tamamlarız ✔`
+        : (isMath
+            ? `• **2. Çözümlü Örnek (Orta Seviye — ${allSubConcepts[1]} Uygulaması):**\n` +
+              `  - **Soru:** "${allSubConcepts[0]}" kuralına göre; birinci ölçümü **${exSeedNum1}** birim, ikinci ölçümü **${exSeedNum2}** birim olan iki değerin toplamının yarısı kaçtır?\n` +
+              `  - **1. Adım:** Önce iki değeri toplayalım: \`${exSeedNum1} + ${exSeedNum2} = ${exSeedNum1 + exSeedNum2}\` birim.\n` +
+              `  - **2. Adım:** Toplamın yarısı: \`${exSeedNum1 + exSeedNum2} ÷ 2 = ${(exSeedNum1 + exSeedNum2) / 2}\` bulunur ✔`
+            : `• **2. Çözümlü Örnek (Orta Seviye — Kavram Karşılaştırması):**\n` +
+              `  - **Örnek Durum:** **${allSubConcepts[0]}** ile **${allSubConcepts[1]}** kavramları birlikte incelendiğinde; birinci kavram **"${outDesc1}"**, ikinci kavram ise **"${outDesc2}"** kazanımını açıklar.\n` +
+              `  - **Çözüm:** Her iki kavram da **${topicTitle}** ünitesinin temel kurallarını birbirini tamamlayarak doğrular ✔`);
 
-    const thirdExampleMd =
-        `• **3. Çözümlü Örnek (İleri / Sınav Tarzı Muhakeme):**\n` +
-        `  - **Senaryo:** Sınavda **${topicTitle}** konusuyla ilgili tablo veya görsel verildiğinde önce **${allSubConcepts[0]}** değişkeninin sınır değerleri kontrol edilir.\n` +
-        `  - **Püf Noktası:** Çeldirici şıklar genellikle **${ otherTopic1.title }** konusunun kurallarını karıştırır; doğru şık ise doğrudan **"${outDesc1}"** ilkesini sağlar ✔`;
+    const thirdExampleMd = g <= 4
+        ? `• **3. Çözümlü Örnek (Pekiştirme Sorusu):**\n` +
+          `  - **İpucu:** Test sorularında **${allSubConcepts[0]}** sorulduğunda şıkları tek tek okuyup **"${outDesc1}"** kuralına tam uyan şıkkı işaretliyoruz ✔`
+        : `• **3. Çözümlü Örnek (İleri / Sınav Tarzı Muhakeme):**\n` +
+          `  - **Senaryo:** Sınavda **${topicTitle}** konusuyla ilgili tablo, şekil veya öncüllü soru verildiğinde önce **${allSubConcepts[0]}** kuralı uygulanır.\n` +
+          `  - **Püf Noktası:** Çeldirici şıklar genellikle **${otherTopic1.title}** konusunun kurallarını karıştırır; doğru şık ise doğrudan **"${outDesc1}"** ilkesini sağlar ✔`;
 
     const detailedWorkedExample =
         `${workedExample}\n\n` +
         `${secondExampleMd}\n\n` +
         `${thirdExampleMd}`;
 
+    const flashcards = [
+        {
+            card_no: 1,
+            tag: "🧱 Temel Bilgi & Ön Hazırlık",
+            front_question: `${g}. Sınıf ${subjectName} — "${topicTitle}" konusunu öğrenirken bilmemiz gereken en temel ön bilgi nedir?`,
+            back_answer: foundationalBasicsMd.replace(/[*`]/g, "")
+        },
+        {
+            card_no: 2,
+            tag: "📘 Ana Kural & Alt Başlıklar",
+            front_question: `"${topicTitle}" konusunun temel kuralı ve alt başlıkları (${allSubConcepts.slice(0, 2).join(", ")}) nelerdir?`,
+            back_answer: `${topicSummary}\n\n${subConceptsBreakdownMd.replace(/[*`]/g, "")}`
+        },
+        {
+            card_no: 3,
+            tag: "🔑 Sınav Şifresi & Dikkat Noktası",
+            front_question: `"${topicTitle}" sorularını çözerken hız kazandıran şifre ve sık yapılan hata nedir?`,
+            back_answer: `${examSecret.replace(/[*`]/g, "")}\n\n${commonTrapsMd.replace(/[*`]/g, "")}`
+        },
+        {
+            card_no: 4,
+            tag: "📐 Adım Adım Örnek Çözüm",
+            front_question: `"${topicTitle}" konusuyla ilgili örnek bir soru adım adım nasıl çözülür?`,
+            back_answer: workedExample.replace(/[*`]/g, "")
+        }
+    ];
+
     // Her konunun soru havuzunu 3 sorudan 5 FARKLI SORU TİPİNE çıkar ve şıkları deterministik karıştır
     const topicHash = String(topicCode + topicTitle).split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
     const vStep = Math.abs(Number(variantIdx) || 0);
 
-    // 4. Soru: Öncüllü (I - II - III) Muhakeme Sorusu (Varyanta göre doğru öncüller değişir!)
-    const premiseMode = (vStep + topicHash) % 3;
-    const p1Text = `I. ${allSubConcepts[0]} incelenirken "${outDesc1}" ilkesi esas alınır.`;
-    const p2Text = premiseMode === 0
-        ? `II. Bu konuda yalnızca "${otherTopic1.title}" kuralları geçerlidir ve hiçbir kural uygulanmaz.`
-        : `II. ${allSubConcepts[1]} uygulamalarında "${outDesc2}" kazanımı doğrudan geçerlidir.`;
-    const p3Text = premiseMode === 1
-        ? `III. Verilenler arasında hiçbir neden-sonuç veya işlem bağıntısı yoktur.`
-        : `III. ${topicSummary.split(".")[0]} kapsamındaki temel kurallar birbiriyle tutarlıdır.`;
-
-    const q4CorrectRaw = premiseMode === 0 ? "C" : (premiseMode === 1 ? "B" : "D");
-    const q4RawOpts = g <= 4
-        ? {
-            A: "Yalnız I",
-            B: premiseMode === 0 ? "I ve III" : "I ve II",
-            C: "I, II ve III"
+    if (g <= 4) {
+        // İlkokul (1–4. Sınıf): Asla Roma rakamlı (I, II, III) meta-soru sorma! Çocuk dostu 3 şıklı uygulama soruları ekle
+        if (isMath) {
+            const pA = 10 + ((vStep * 3 + g * 2) % 25);
+            const pB = 6 + ((vStep * 2 + g) % 15);
+            quizList.push({
+                q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Bir sınıfta ${pA} kız öğrenci ve ${pB} erkek öğrenci vardır. Sınıfta toplam kaç öğrenci vardır?`,
+                options: { A: String(pA + pB - 2), B: String(pA + pB), C: String(pA + pB + 3) },
+                correct: "B",
+                solution: `1. Adım: Kız öğrenciler (${pA}) ile erkek öğrenciler (${pB}) toplanır.\n2. Adım: ${pA} + ${pB} = ${pA + pB} öğrenci vardır.`
+            });
+            quizList.push({
+                q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Cebinde ${pA + pB} TL harçlığı olan Zeynep, kırtasiyeden ${pB} TL'ye boya kalemi aldı. Zeynep'in geriye kaç TL parası kaldı?`,
+                options: { A: String(pA), B: String(pA + 2), C: String(pA - 2) },
+                correct: "A",
+                solution: `1. Adım: Harcanan para toplam paradan çıkarılır.\n2. Adım: ${pA + pB} - ${pB} = ${pA} TL kalır.`
+            });
+        } else {
+            quizList.push({
+                q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle}) "${allSubConcepts[0]}" konusunu çalışan bir öğrencinin aşağıdaki davranışlardan hangisini yapması DOĞRUDUR?`,
+                options: {
+                    A: `${outDesc1} kuralına uygun örnekler vermek ve kurallara uymak`,
+                    B: "Kuralları ve yazım işaretlerini hiç dikkate almamak",
+                    C: "Soruyu okumadan rastgele işaretlemek"
+                },
+                correct: "A",
+                solution: `1. Adım: "${topicTitle}" konusunda temel hedef "${outDesc1}" kuralını doğru uygulamaktır.`
+            });
+            quizList.push({
+                q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle}) Öğretmenimiz derste "${allSubConcepts[1]}" konusunu anlatırken aşağıdakilerden hangisi bu konunun doğru açıklaması olur?`,
+                options: {
+                    A: "Hiçbir kuralın olmadığı bilgisiz tahmin",
+                    B: `${topicSummary.split(".")[0]} ilkesinin doğru uygulanması`,
+                    C: `Farklı bir konu olan "${otherTopic1.title}" kuralı`
+                },
+                correct: "B",
+                solution: `1. Adım: "${allSubConcepts[1]}" doğrudan "${topicSummary.split(".")[0]}" kapsamındadır.`
+            });
         }
-        : {
+    } else {
+        // Ortaokul (5–8. Sınıf) ve Lise (9–12. Sınıf): 4. Soru Öncüllü Muhakeme, 5. Soru Yeni Nesil Senaryo/Tablo
+        const premiseMode = (vStep + topicHash) % 3;
+        const p1Text = `I. ${allSubConcepts[0]} incelenirken "${outDesc1}" ilkesi esas alınır.`;
+        const p2Text = premiseMode === 0
+            ? `II. Bu konuda yalnızca "${otherTopic1.title}" kuralları geçerlidir ve kendi kuralları uygulanmaz.`
+            : `II. ${allSubConcepts[1]} uygulamalarında "${outDesc2}" kazanımı doğrudan geçerlidir.`;
+        const p3Text = premiseMode === 1
+            ? `III. Verilen değişkenler arasında hiçbir neden-sonuç veya işlem bağıntısı yoktur.`
+            : `III. ${topicSummary.split(".")[0]} kapsamındaki temel kurallar birbiriyle tutarlıdır.`;
+
+        const q4CorrectRaw = premiseMode === 0 ? "C" : (premiseMode === 1 ? "B" : "D");
+        const q4RawOpts = {
             A: "Yalnız I",
             B: "I ve II",
             C: "I ve III",
             D: "I, II ve III",
             E: "II ve III"
         };
-    const q4ActualCorrect = g <= 4 ? (premiseMode === 2 ? "C" : "B") : q4CorrectRaw;
 
-    // 5. Soru: Tablo / Grafik / Yeni Nesil Senaryo Sorusu (Varyanta göre sayısal/kavramsal değerler değişir!)
-    const valK = 20 + ((vStep * 7 + (topicHash % 11)) % 30);
-    const valL = valK + 15 + (vStep % 4) * 5;
-    const valM = valK + valL;
-    const q5Raw = isMath
-        ? {
-            q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Yeni Nesil Tablo Sorusu) Bir uygulamada "${allSubConcepts[0]}" kuralına göre 1. adımda ${valK} birim, 2. adımda ${valL} birim ölçüm yapılmıştır. 3. adımdaki ölçüm ilk iki adımın toplamına eşit olduğuna göre 3. adım değeri kaç birimdir?`,
-            opts: {
-                A: String(valM - 10),
-                B: String(valM - 5),
-                C: String(valM),
-                D: String(valM + 5),
-                E: String(valM + 10)
-            },
-            ans: "C",
-            sol: `1. Adım: İlk iki adımın değerleri ${valK} ve ${valL} birimdir.\n2. Adım: 3. adım değeri = ${valK} + ${valL} = ${valM} birim bulunur.`
-        }
-        : {
-            q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Karşılaştırmalı Tablo & Vaka Sorusu) Bir çalışma grubunda "${allSubConcepts[0]}" (K Grubu) ve "${allSubConcepts[1]}" (L Grubu) incelenmektedir. Yapılan incelemede K ve L gruplarının "${outDesc1}" kazanımını hangi ortak özellikle sağladığı görülür?`,
-            opts: {
-                A: `Konu kapsamı dışındaki "${otherTopic1.title}" kurallarını rastgele uygulamalarıyla`,
-                B: `${topicSummary.split(".")[0]} ilkesine ve neden-sonuç bütünlüğüne tam uymalarıyla`,
-                C: `Tüm kuralları ve tanımları tamamen reddetmeleriyle`,
-                D: `Yalnızca "${otherTopic2.title}" konusuna ait olmalarıyla`,
-                E: `Hiçbir bilimsel veya dilsel kurala dayanmamalarıyla`
-            },
-            ans: "B",
-            sol: `1. Adım: K (${allSubConcepts[0]}) ve L (${allSubConcepts[1]}) alt başlıkları "${topicTitle}" konusunun temel parçalarıdır.\n2. Adım: Her iki grup da "${topicSummary.split(".")[0]}" ilkesine ve "${outDesc1}" kazanımına tam uyar.`
-        };
+        const valK = 20 + ((vStep * 7 + (topicHash % 11)) % 30);
+        const valL = valK + 15 + (vStep % 4) * 5;
+        const valM = valK + valL;
+        const q5Raw = isMath
+            ? {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Yeni Nesil Tablo Sorusu) Bir uygulamada "${allSubConcepts[0]}" kuralına göre 1. adımda ${valK} birim, 2. adımda ${valL} birim ölçüm yapılmıştır. 3. adımdaki ölçüm ilk iki adımın toplamına eşit olduğuna göre 3. adım değeri kaç birimdir?`,
+                opts: {
+                    A: String(valM - 10),
+                    B: String(valM - 5),
+                    C: String(valM),
+                    D: String(valM + 5),
+                    E: String(valM + 10)
+                },
+                ans: "C",
+                sol: `1. Adım: İlk iki adımın değerleri ${valK} ve ${valL} birimdir.\n2. Adım: 3. adım değeri = ${valK} + ${valL} = ${valM} birim bulunur.`
+            }
+            : {
+                q: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Karşılaştırmalı Analiz Sorusu) Bir incelemede "${allSubConcepts[0]}" (K Durumu) ve "${allSubConcepts[1]}" (L Durumu) karşılaştırılmaktadır. K ve L durumlarının "${outDesc1}" kazanımını hangi ortak özellikle sağladığı görülür?`,
+                opts: {
+                    A: `Konu kapsamı dışındaki "${otherTopic1.title}" kurallarını rastgele uygulamalarıyla`,
+                    B: `${topicSummary.split(".")[0]} ilkesine ve neden-sonuç bütünlüğüne tam uymalarıyla`,
+                    C: `Tüm kuralları ve tanımları tamamen reddetmeleriyle`,
+                    D: `Yalnızca "${otherTopic2.title}" konusuna ait olmalarıyla`,
+                    E: `Hiçbir bilimsel veya dilsel kurala dayanmamalarıyla`
+                },
+                ans: "B",
+                sol: `1. Adım: K (${allSubConcepts[0]}) ve L (${allSubConcepts[1]}) alt başlıkları "${topicTitle}" konusunun temel parçalarıdır.\n2. Adım: Her iki durum da "${topicSummary.split(".")[0]}" ilkesine ve "${outDesc1}" kazanımına tam uyar.`
+            };
 
-    quizList.push({
-        q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Öncüllü Muhakeme Sorusu)\n"${topicTitle}" konusuyla ilgili aşağıda verilen;\n${p1Text}\n${p2Text}\n${p3Text}\nyargılarından hangileri DOĞRUDUR?`,
-        options: q4RawOpts,
-        correct: q4ActualCorrect,
-        solution: `1. Adım: I. öncül "${outDesc1}" kazanımını doğrudan ifade ettiği için doğrudur.\n2. Adım: ${premiseMode === 0 ? "II. öncül farklı bir üniteye ait olduğu için yanlıştır, III. öncül doğrudur (I ve III)." : (premiseMode === 1 ? "II. öncül doğrudur, III. öncül çelişkili olduğu için yanlıştır (I ve II)." : "I, II ve III. öncüllerin tamamı konunun MEB kazanımlarıyla örtüşmektedir (I, II ve III).")}`
-    });
+        quizList.push({
+            q_text: `(${g}. Sınıf ${subjectName} • ${topicTitle} — Öncüllü Muhakeme Sorusu)\n"${topicTitle}" konusuyla ilgili aşağıda verilen;\n${p1Text}\n${p2Text}\n${p3Text}\nyargılarından hangileri DOĞRUDUR?`,
+            options: q4RawOpts,
+            correct: q4CorrectRaw,
+            solution: `1. Adım: I. öncül "${outDesc1}" kazanımını doğrudan ifade ettiği için doğrudur.\n2. Adım: ${premiseMode === 0 ? "II. öncül farklı bir üniteye ait olduğu için yanlıştır, III. öncül doğrudur (I ve III)." : (premiseMode === 1 ? "II. öncül doğrudur, III. öncül çelişkili olduğu için yanlıştır (I ve II)." : "I, II ve III. öncüllerin tamamı konunun MEB kazanımlarıyla örtüşmektedir (I, II ve III).")}`
+        });
 
-    quizList.push({
-        q_text: q5Raw.q,
-        options: q5Raw.opts,
-        correct: q5Raw.ans,
-        solution: q5Raw.sol
-    });
+        quizList.push({
+            q_text: q5Raw.q,
+            options: q5Raw.opts,
+            correct: q5Raw.ans,
+            solution: q5Raw.sol
+        });
+    }
 
     // Mevcut tüm sorularda doğru şıkkın yerini (A, B, C, D, E) deterministik olarak dağıt
+    // ve çözüm metninin içindeki "(A)", "(B)", "Doğru cevap B" referanslarını yeni doğru şık harfiyle senkronize et!
     quizList = quizList.map((item, qIdx) => {
         const shuffled = trimOptionsToGrade(item.options, item.correct, g, topicHash + vStep * 3 + qIdx * 2);
-        const updatedSolution = String(item.solution || "").replace(/Doğru cevap [A-E](![\s.]*|\s+seçeneğidir|\b)/g, `Doğru cevap ${shuffled.correctKey} seçeneğidir.`);
+        let updatedSolution = String(item.solution || "")
+            .replace(/Doğru cevap [A-E](![\s.]*|\s+seçeneğidir\.?|\b)/g, `Doğru cevap ${shuffled.correctKey} seçeneğidir.`)
+            .replace(/\([A-E]\)\.?$/g, `(${shuffled.correctKey}).`);
         return {
             q_text: item.q_text,
             options: shuffled.options,
@@ -6833,7 +7048,7 @@ let NX_STATE = {
 document.addEventListener("DOMContentLoaded", async () => {
     registerNexoraServiceWorker();
     setupPwaInstallPrompt();
-    const savedStars = localStorage.getItem("lumina_student_stars") || "120";
+    const savedStars = localStorage.getItem("lumina_student_stars_v3") || "0";
     const starEl = document.getElementById("studentStarCount");
     if (starEl) starEl.textContent = savedStars;
     await initializeNexoraSession();
@@ -7278,7 +7493,11 @@ function renderCurriculumViews() {
     `;
     hubBox.appendChild(topicSelectWrap);
 
-    // 1-12. Sınıf Etkileşimli Konu Öğrenme, MEB Ortak Yazılı & Konu Testi Stüdyosunu Render Et
+    // 1-12. Sınıf Etkileşimli Konu Öğrenme, MEB Ortak Yazılı & Konu Testi Stüdyosunu Konu Seçicinin Hemen Altında Render Et
+    const studioBox = document.getElementById("gradeTopicLearningStudioBox");
+    if (studioBox) {
+        hubBox.appendChild(studioBox);
+    }
     renderGradeTopicLearningStudio(NX_STATE.hubStudioTab || "learn", NX_STATE.hubStudioVariant || 0);
 
     const isReviewerOrAdmin = NX_STATE.currentUser && ["reviewer", "admin"].includes(NX_STATE.currentUser.account_type);
@@ -7608,12 +7827,6 @@ function downloadGradeTopicWorksheetPdf() {
         : null;
     if (!pkg) return;
 
-    const win = window.open("", "_blank", "width=860,height=920");
-    if (!win) {
-        window.print();
-        return;
-    }
-
     const writtenHtml = (pkg.written_exam_questions || []).map(w => `
         <div style="border:1px solid #CBD5E1;border-radius:8px;padding:10px;margin-bottom:10px;">
             <strong>${w.term_badge} — Soru ${w.q_no} (${w.points} Puan):</strong>
@@ -7636,42 +7849,49 @@ function downloadGradeTopicWorksheetPdf() {
         `<li><strong>Test Sorusu ${idx + 1} Doğru Cevap (${q.correct}):</strong> ${q.solution.replace(/\n/g, " ")}</li>`
     ).join("");
 
-    win.document.write(`
-        <!DOCTYPE html>
-        <html lang="tr">
-        <head>
-            <meta charset="UTF-8">
-            <title>${pkg.grade}. Sınıf ${pkg.subject_name} — ${pkg.topic_title} Çalışma ve Yazılı Kağıdı</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 22px; color: #1E1B4B; line-height: 1.45; font-size: 13px; }
-                h2, h3 { margin: 8px 0; color: #4C1D95; }
-                .box { background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
-            </style>
-        </head>
-        <body>
-            <h2>LUMINA AI — ${pkg.grade}. Sınıf ${pkg.subject_name} Çalışma, Yazılı ve Konu Testi Kağıdı</h2>
-            <p><strong>Ünite / Konu:</strong> ${pkg.topic_code} — ${pkg.topic_title} | <strong>Format:</strong> ${pkg.option_mode_label}</p>
-            <div class="box">
-                <h3>1. Konu Özeti & Sınav Şifresi</h3>
-                <p>${pkg.core_rule.replace(/[*`]/g, "")}</p>
-                <p>${pkg.exam_secret.replace(/[*`]/g, "")}</p>
+    const sheetBodyHtml = `
+        <h2>LUMINA AI — ${pkg.grade}. Sınıf ${pkg.subject_name} Çalışma, Yazılı ve Konu Testi Kağıdı</h2>
+        <p><strong>Ünite / Konu:</strong> ${pkg.topic_code} — ${pkg.topic_title} | <strong>Format:</strong> ${pkg.option_mode_label}</p>
+        <div class="box" style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:8px;padding:10px;margin-bottom:12px;">
+            <h3>1. Konu Özeti & Sınav Şifresi</h3>
+            <p style="white-space:pre-line;">${pkg.core_rule.replace(/[*`]/g, "")}</p>
+            <p style="white-space:pre-line;margin-top:6px;">${pkg.exam_secret.replace(/[*`]/g, "")}</p>
+        </div>
+        ${pkg.visual_svg}
+        <h3>2. MEB 1. & 2. Dönem Ortak Yazılı Açık Uçlu Soruları</h3>
+        ${writtenHtml}
+        <h3>3. Çoktan Seçmeli Konu Tarama Testi</h3>
+        ${quizHtml}
+        <hr style="margin-top:16px;">
+        <div class="box" style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:8px;padding:10px;margin-bottom:12px;">
+            <h3>4. Cevap Anahtarı ve Çözümler</h3>
+            <ul>${answerKeyHtml}</ul>
+        </div>
+    `;
+
+    // Uygulama içi yazdırılabilir çalışma kağıdı önizleme penceresi (Popup engelleyiciye takılmaz)
+    let previewModal = document.getElementById("printableWorksheetModal");
+    if (!previewModal) {
+        previewModal = document.createElement("div");
+        previewModal.id = "printableWorksheetModal";
+        previewModal.style.cssText = "position:fixed;inset:0;background:rgba(30,27,75,0.65);z-index:120;display:flex;align-items:center;justify-content:center;padding:14px;";
+        document.body.appendChild(previewModal);
+    }
+    previewModal.style.display = "flex";
+    previewModal.innerHTML = `
+        <div class="nx-card" style="max-width:780px;width:100%;max-height:88vh;overflow-y:auto;background:#FFFFFF;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:2px solid #EDE9FE;padding-bottom:10px;margin-bottom:12px;position:sticky;top:0;background:#FFFFFF;z-index:2;">
+                <strong style="color:#4C1D95;font-size:0.9rem;">🖨️ Çalışma & Yazılı Kağıdı Önizleme (${pkg.grade}. Sınıf ${pkg.subject_name})</strong>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 12px;font-size:0.74rem;" onclick="window.print()">🖨️ Şimdi Yazdır / PDF Kaydet</button>
+                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:30px;padding:4px 10px;font-size:0.74rem;" onclick="document.getElementById('printableWorksheetModal').style.display='none'">Kapat ✕</button>
+                </div>
             </div>
-            ${pkg.visual_svg}
-            <h3>2. MEB 1. & 2. Dönem Ortak Yazılı Açık Uçlu Soruları</h3>
-            ${writtenHtml}
-            <h3>3. Çoktan Seçmeli Konu Tarama Testi</h3>
-            ${quizHtml}
-            <hr style="margin-top:16px;">
-            <div class="box">
-                <h3>4. Cevap Anahtarı ve Çözümler</h3>
-                <ul>${answerKeyHtml}</ul>
+            <div style="font-size:0.8rem;line-height:1.45;color:#1E1B4B;">
+                ${sheetBodyHtml}
             </div>
-        </body>
-        </html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 300);
+        </div>
+    `;
 }
 
 /* ==========================================================================
@@ -7803,7 +8023,11 @@ function renderInitialTutorGreeting(isTopicSwitch = false) {
         `• ${typeof o === "string" ? o : (o.outcome_code + ": " + o.description)}`
     ).join("\n");
 
-    const rawUserName = (u && u.full_name) ? u.full_name.replace(/\(\d+\.\s*Sınıf[^)]*\)/i, `(${g}. Sınıf Öğrencisi)`) : "Öğrenci";
+    const customSavedName = (localStorage.getItem("lumina_student_custom_name") || "").trim();
+    const cleanedDefaultName = (u && u.full_name)
+        ? u.full_name.replace(/\[DEMO\]\s*/gi, "").replace(/\(\d+\.\s*Sınıf[^)]*\)/i, "").trim()
+        : "Öğrenci";
+    const rawUserName = customSavedName || cleanedDefaultName || "Öğrenci";
     const isEngSubj = subj.toLocaleLowerCase("tr-TR").includes("ingilizce");
 
     let greetingMd = "";
@@ -8303,8 +8527,14 @@ async function sendTutorMessage(explicitTopicId = null) {
             ? data.reply
             : buildClientVerifiedResponse(msg, NX_STATE.currentGrade, NX_STATE.currentSubject, NX_STATE.pedagogicalMode, hasImg, hasPdf, pdfPayload);
 
-        const activeVisualSvg = (!hasImg && typeof buildElementaryOrGradeVisualSvg === "function")
-            ? buildElementaryOrGradeVisualSvg(NX_STATE.currentGrade, NX_STATE.currentSubject, (NX_STATE.selectedTopic && NX_STATE.selectedTopic.title) ? NX_STATE.selectedTopic.title : msg, 0)
+        const lowMsg = String(msg || "").toLocaleLowerCase("tr-TR");
+        const isGenericPromptForSelected = lowMsg.includes("seçili konunun") || lowMsg.includes("bu konuyu") || lowMsg.includes("seviyeme uygun") || lowMsg.includes("püf noktalarını") || lowMsg.includes("5 yaşındaymışım");
+        const isPureMathSolved = typeof solveMathInMessage === "function" && !!solveMathInMessage(msg, NX_STATE.currentGrade, NX_STATE.currentSubject, NX_STATE.pedagogicalMode);
+        const visualTitleContext = isGenericPromptForSelected
+            ? ((NX_STATE.selectedTopic && NX_STATE.selectedTopic.title) ? NX_STATE.selectedTopic.title : msg)
+            : msg;
+        const activeVisualSvg = (!hasImg && !isPureMathSolved && typeof buildElementaryOrGradeVisualSvg === "function")
+            ? buildElementaryOrGradeVisualSvg(NX_STATE.currentGrade, NX_STATE.currentSubject, visualTitleContext, 0)
             : "";
 
         appendTutorBubble("assistant", finalReply, {
@@ -8331,8 +8561,14 @@ async function sendTutorMessage(explicitTopicId = null) {
         }
 
         const fallbackReply = buildClientVerifiedResponse(msg, NX_STATE.currentGrade, NX_STATE.currentSubject, NX_STATE.pedagogicalMode, hasImg, hasPdf, pdfPayload);
-        const fallbackVisualSvg = (!hasImg && typeof buildElementaryOrGradeVisualSvg === "function")
-            ? buildElementaryOrGradeVisualSvg(NX_STATE.currentGrade, NX_STATE.currentSubject, (NX_STATE.selectedTopic && NX_STATE.selectedTopic.title) ? NX_STATE.selectedTopic.title : msg, 0)
+        const lowMsg = String(msg || "").toLocaleLowerCase("tr-TR");
+        const isGenericPromptForSelected = lowMsg.includes("seçili konunun") || lowMsg.includes("bu konuyu") || lowMsg.includes("seviyeme uygun") || lowMsg.includes("püf noktalarını") || lowMsg.includes("5 yaşındaymışım");
+        const isPureMathSolved = typeof solveMathInMessage === "function" && !!solveMathInMessage(msg, NX_STATE.currentGrade, NX_STATE.currentSubject, NX_STATE.pedagogicalMode);
+        const visualTitleContext = isGenericPromptForSelected
+            ? ((NX_STATE.selectedTopic && NX_STATE.selectedTopic.title) ? NX_STATE.selectedTopic.title : msg)
+            : msg;
+        const fallbackVisualSvg = (!hasImg && !isPureMathSolved && typeof buildElementaryOrGradeVisualSvg === "function")
+            ? buildElementaryOrGradeVisualSvg(NX_STATE.currentGrade, NX_STATE.currentSubject, visualTitleContext, 0)
             : "";
         appendTutorBubble("assistant", fallbackReply, {
             engine: "Lumina Akıllı Öğretmen & Çözücü",
@@ -8871,8 +9107,9 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
     let targetSubjectName = subject;
 
     const stripUnitPrefix = (titleStr) => String(titleStr || "").replace(/^\d+\.\s*ünite\s*:\s*/i, "").trim().toLocaleLowerCase("tr-TR");
+    const isGenericActionPrompt = low.includes("seçili konunun") || low.includes("bu konuyu") || low.includes("seviyeme uygun") || low.includes("püf noktalarını") || low.includes("5 yaşındaymışım") || low.includes("örnek soru çöz") || low.includes("ortak yazılı sorusu");
 
-    if (gTree && gTree.subjects) {
+    if (!isGenericActionPrompt && gTree && gTree.subjects) {
         // Önce seçili dersin (subject) kendi konuları içinde eşleşme ara
         const currentSubjTopics = gTree.subjects[subject] || [];
         let explicitlyFound = false;
@@ -8896,8 +9133,8 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
                 for (const [sName, tList] of Object.entries(treeCandidate.subjects)) {
                     for (const tObj of tList) {
                         const cleanT = stripUnitPrefix(tObj.title);
-                        const words = cleanT.split(/[\s,()/-]+/).filter(w => w.length >= 5);
-                        if ((cleanT.length >= 6 && low.includes(cleanT.substring(0, Math.min(14, cleanT.length)))) ||
+                        const words = cleanT.split(/[\s,()/-]+/).filter(w => w.length >= 6);
+                        if ((cleanT.length >= 8 && low.includes(cleanT.substring(0, Math.min(16, cleanT.length)))) ||
                             words.some(w => low.includes(w))) {
                             targetTopicObj = tObj;
                             targetSubjectName = sName;
@@ -8914,7 +9151,6 @@ function buildClientVerifiedResponse(msg, grade, subject, mode, hasImg = false, 
 
     // 5. ANSİKLOPEDİK BİLGİ BANKASI KONTROLÜ (Öğrenci açıkça bir kavram sorduysa ders fark etmeksizin yanıtla!)
     let matchedEncyclopedia = null;
-    const isGenericActionPrompt = low.includes("seçili konunun") || low.includes("bu konuyu") || low.includes("seviyeme uygun");
     const searchContext = isGenericActionPrompt
         ? `${targetSubjectName} ${stripUnitPrefix(targetTopicObj.title)}`.toLocaleLowerCase("tr-TR")
         : low;
@@ -9196,11 +9432,29 @@ function setRobotSpeakingState(isSpeaking) {
 
 function toggleTtsReadAloud() {
     NX_STATE.ttsEnabled = !NX_STATE.ttsEnabled;
-    document.getElementById("ttsStatusLabel").textContent = `Ses: ${NX_STATE.ttsEnabled ? "Açık" : "Kapalı"}`;
+    const lbl = document.getElementById("ttsStatusLabel");
+    if (lbl) lbl.textContent = `Ses: ${NX_STATE.ttsEnabled ? "Açık" : "Kapalı"}`;
+    const modalBtn = document.getElementById("modalTtsToggleBtn");
+    if (modalBtn) modalBtn.textContent = `Ses: ${NX_STATE.ttsEnabled ? "Açık 🔊" : "Kapalı 🔇"}`;
     if (!NX_STATE.ttsEnabled && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
         setRobotSpeakingState(false);
     }
+}
+
+function toggleAutoSpeak() {
+    toggleTtsReadAloud();
+}
+
+function saveStudentCustomName() {
+    const inp = document.getElementById("studentCustomNameInput");
+    const nameVal = inp ? inp.value.trim() : "";
+    localStorage.setItem("lumina_student_custom_name", nameVal);
+    const statusEl = document.getElementById("studentNameSaveStatus");
+    if (statusEl) {
+        statusEl.textContent = nameVal ? `✔ Hoş geldin ${nameVal}! Adın kaydedildi.` : "✔ Öğrenci adı güncellendi.";
+    }
+    renderInitialTutorGreeting(false);
 }
 
 function stopTtsSpeech() {
@@ -9223,6 +9477,8 @@ function cycleTtsSpeed() {
     NX_STATE.ttsRate = next.rate;
     const lbl = document.getElementById("ttsSpeedLabel");
     if (lbl) lbl.textContent = next.label;
+    const modalSpeedBtn = document.getElementById("modalTtsSpeedBtn");
+    if (modalSpeedBtn) modalSpeedBtn.textContent = `Hız: ${next.label}`;
 }
 
 function speakIfEnabled(text) {
@@ -9397,12 +9653,16 @@ async function loadSmartExamQuestions(incrementVariant = false) {
     });
 
     const examPane = document.getElementById("pane-smart-exam");
+    NX_STATE.examTimerSeconds = 900;
+    const disp = document.getElementById("examTimerDisplay");
+    if (disp) disp.textContent = "15:00";
+    const badge = document.getElementById("examTimerBadge");
+    if (badge) {
+        badge.style.background = "";
+        badge.style.color = "";
+    }
     if (examPane && examPane.classList.contains("active")) {
         startExamCountdown(900);
-    } else {
-        NX_STATE.examTimerSeconds = 900;
-        const disp = document.getElementById("examTimerDisplay");
-        if (disp) disp.textContent = "15:00";
     }
 }
 
@@ -9444,6 +9704,10 @@ function startExamCountdown(seconds) {
 }
 
 async function submitSmartExam() {
+    if (NX_STATE.examTimerInterval) {
+        clearInterval(NX_STATE.examTimerInterval);
+        NX_STATE.examTimerInterval = null;
+    }
     const resBox = document.getElementById("examEvaluationResultBox");
     resBox.style.display = "block";
 
@@ -9515,7 +9779,6 @@ function renderExamEvaluationReport(data) {
                         🔄 Öğrendiğimi Kanıtla: Bana Bunun İkizi (Benzeri) Bir Soru Daha Sor (+10 🌟)
                     </button>
                     <div id="twin_box_${twinContainerId}" style="margin-top:8px;"></div>
-                    <div id="sol_${twinContainerId}" style="margin-top:6px;"></div>
                 </div>
             ` : ""}
         </div>
@@ -9897,13 +10160,15 @@ async function loadMindAnalyticsAndCoach() {
     `;
     }).join("");
 
-    // 4. 📕 YANLIŞ DEFTERİM (YALNIZCA ÖĞRENCİNİN GERÇEKTEN YANLIŞ YAPTIĞI SORULAR)
-    const activeMistakes = (stats.mistakeNotebook || []).filter(m => !m.resolved);
+    // 4. 📕 YANLIŞ DEFTERİM (SEÇİLİ SINIFA ÖNCELİK VEREN VE TEKRAR ÇÖZÜMDE CEVABI ÖNCE GİZLEYEN YAPI)
+    const allUnresolved = (stats.mistakeNotebook || []).filter(m => !m.resolved);
+    const sameGradeMistakes = allUnresolved.filter(m => Number(m.grade) === Number(g));
+    const activeMistakes = sameGradeMistakes.length > 0 ? sameGradeMistakes : allUnresolved;
 
     const resolvedCount = (stats.mistakeNotebook || []).filter(m => m.resolved).length;
     document.getElementById("mistakesDiagnosticBox").innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
-            <span class="nx-badge nx-badge-danger">📕 Bekleyen Hatalı Soru: ${activeMistakes.length}</span>
+            <span class="nx-badge nx-badge-danger">📕 Bekleyen Hatalı Soru (${g}. Sınıf): ${activeMistakes.length}</span>
             <span class="nx-badge nx-badge-published">✔ Temizlenen (Öğrenilen) Hata: ${resolvedCount}</span>
         </div>
     ` + (activeMistakes.length === 0 ? `
@@ -9912,6 +10177,7 @@ async function loadMindAnalyticsAndCoach() {
         </div>
     ` : activeMistakes.map((mk, mIdx) => {
         const retryBoxId = `retry_mk_${mIdx}`;
+        const solRevealId = `sol_mk_${mIdx}`;
         return `
             <div style="border:1.5px solid #FECACA;background:#FEF2F2;padding:12px;border-radius:12px;margin-bottom:10px;font-size:0.81rem;">
                 <div style="display:flex;justify-content:space-between;font-weight:800;color:#991B1B;flex-wrap:wrap;gap:4px;">
@@ -9919,19 +10185,26 @@ async function loadMindAnalyticsAndCoach() {
                     <span>Tanı: ${mk.mistake_category === 'calculation_error' ? 'İşlem / Kural Hatası' : 'Bilgi / Kavram Eksikliği'}</span>
                 </div>
                 <p style="margin-top:6px;font-weight:700;color:#1E1B4B;">❓ Hatalı Yapılan Soru: ${mk.question_text}</p>
-                <p style="margin-top:4px;color:#7F1D1D;font-size:0.77rem;"><strong>Doğru Cevap (${mk.correct_option}) & Çözüm Özeti:</strong> ${mk.solution}</p>
+                <p style="margin-top:4px;color:#991B1B;font-size:0.75rem;">🔍 <strong>Hata Tanısı:</strong> ${mk.misconception_diagnosis || 'Bu soruda işlem veya kavram adımı karıştırıldı.'}</p>
+                <div id="${solRevealId}" style="display:none;margin-top:6px;background:#FFFBEB;border:1px solid #FDE68A;padding:8px;border-radius:8px;color:#78350F;font-size:0.76rem;">
+                    <strong>💡 Doğru Cevap (${mk.correct_option}) & Çözüm Özeti:</strong> ${mk.solution}
+                </div>
                 <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
                     <button type="button" class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 10px;font-size:0.73rem;"
                             onclick="const b=document.getElementById('${retryBoxId}');if(b)b.style.display='block';">
                         🔄 Şimdi Tekrar Çöz & Yanlış Defterimden Temizle (+15 🌟)
                     </button>
+                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:30px;padding:4px 10px;font-size:0.73rem;background:#FFFFFF;"
+                            onclick="const s=document.getElementById('${solRevealId}');if(s)s.style.display=s.style.display==='none'?'block':'none';">
+                        💡 İpucu & Çözümü Gör
+                    </button>
                 </div>
                 <div id="${retryBoxId}" style="display:none;margin-top:8px;background:#FFFFFF;border:1.5px solid #10B981;border-radius:10px;padding:10px;">
-                    <strong style="color:#065F46;display:block;margin-bottom:6px;">🎯 Çözümü Anladın mı? Doğru Şıkkı Seçerek Bu Hatayı Defterden Sil:</strong>
+                    <strong style="color:#065F46;display:block;margin-bottom:6px;">🎯 Doğru Şıkkı Seçerek Bu Hatayı Defterden Sil (+15 🌟):</strong>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         ${["A", "B", "C", "D", "E"].slice(0, typeof getOptionCountForGrade === "function" ? getOptionCountForGrade(mk.grade) : 4).map(optK => `
                             <button type="button" class="nx-btn nx-btn-outline" style="min-height:30px;padding:4px 12px;font-size:0.76rem;"
-                                    onclick="if('${optK}'==='${mk.correct_option}'){resolveMistakeFromNotebook('${mk.id}');}else{this.style.background='#FEF2F2';this.style.color='#991B1B';this.textContent='${optK} (Tekrar Dene)';}">
+                                    onclick="if('${optK}'==='${mk.correct_option}'){resolveMistakeFromNotebook('${mk.id}');}else{this.style.background='#FEF2F2';this.style.color='#991B1B';this.textContent='${optK} (Tekrar Dene)';const s=document.getElementById('${solRevealId}');if(s)s.style.display='block';}">
                                 Şık ${optK}
                             </button>
                         `).join("")}
@@ -10276,6 +10549,14 @@ function openAccountModal() {
         statusEl.textContent = saved
             ? "✔ Canlı Google Gemini 2.5 Flash bağlantısı aktif!"
             : "ℹ️ Şu anda Lumina Yerleşik Akıllı Öğretmen & Matematik Çözücü Motoru aktif.";
+    }
+    const nameIn = document.getElementById("studentCustomNameInput");
+    if (nameIn) {
+        nameIn.value = localStorage.getItem("lumina_student_custom_name") || "";
+    }
+    const modalBtn = document.getElementById("modalTtsToggleBtn");
+    if (modalBtn) {
+        modalBtn.textContent = `Ses: ${NX_STATE.ttsEnabled ? "Açık 🔊" : "Kapalı 🔇"}`;
     }
     document.getElementById("accountPrivacyModal").style.display = "flex";
 }
@@ -11818,11 +12099,20 @@ function awardStudentStars(points = 10, reasonLabel = "Doğru Cevap!") {
 
 function checkStudioQuestionAnswer(qDomId, chosenKey, correctKey) {
     const solBox = document.getElementById(`sol_${qDomId}`);
-    if (solBox) solBox.style.display = "block";
+    // İlk tıklamadan sonra aynı soruda başka şıkka tıklanarak haksız yıldız kazanılmasını engelle
+    if (solBox && solBox.dataset.answeredLocked === "1") {
+        return;
+    }
+    if (solBox) {
+        solBox.style.display = "block";
+        solBox.dataset.answeredLocked = "1";
+    }
 
     ["A", "B", "C", "D", "E"].forEach(k => {
         const btn = document.getElementById(`btn_${qDomId}_${k}`);
         if (!btn) return;
+        btn.disabled = true;
+        btn.style.pointerEvents = "none";
         if (k === correctKey) {
             btn.style.background = "#ECFDF5";
             btn.style.borderColor = "#10B981";
