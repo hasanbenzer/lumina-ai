@@ -8360,6 +8360,8 @@ function renderGradeTopicLearningStudio(activeTab = "learn", variantIdx = 0) {
                 </div>
                 ${(pkg.written_exam_questions || []).map((wq, wIdx) => {
                     const wDomId = `written_g${pkg.grade}_${wIdx}`;
+                    const wInputId = `written_input_g${pkg.grade}_${wIdx}`;
+                    const wEvalId = `written_eval_g${pkg.grade}_${wIdx}`;
                     return `
                         <div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin-bottom:8px;background:#F8FAFC;">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;flex-wrap:wrap;gap:4px;">
@@ -8367,11 +8369,18 @@ function renderGradeTopicLearningStudio(activeTab = "learn", variantIdx = 0) {
                                 <span class="nx-badge nx-badge-pending">Puan Değeri: ${wq.points} Puan</span>
                             </div>
                             <p style="font-size:0.81rem;font-weight:700;line-height:1.5;white-space:pre-line;margin-bottom:8px;">${wq.question}</p>
-                            <textarea rows="2" class="nx-btn nx-btn-outline" style="width:100%;height:auto;text-align:left;font-size:0.76rem;background:#FFFFFF;margin-bottom:6px;" placeholder="Yazılı kağıdına yazar gibi cevabını buraya not alabilirsin..."></textarea>
-                            <button class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 10px;font-size:0.73rem;"
-                                    onclick="const el=document.getElementById('${wDomId}');if(el){el.style.display='block';awardStudentStars(10, 'Yazılı Senaryosu Tamamlandı!');}">
-                                ✔ MEB Puanlama Anahtarını & Tam Çözümü Göster (+10 🌟)
-                            </button>
+                            <textarea id="${wInputId}" rows="3" class="nx-btn nx-btn-outline" style="width:100%;height:auto;text-align:left;font-size:0.76rem;background:#FFFFFF;margin-bottom:6px;padding:8px;" placeholder="Yazılı kağıdına yazar gibi cevabını ve işlem adımlarını buraya yaz..."></textarea>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <button type="button" class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 10px;font-size:0.73rem;background:#7C3AED;"
+                                        onclick="gradeMebOpenEndedAnswer('${wInputId}', '${wEvalId}', '${wDomId}', ${wq.points || 25})">
+                                    🤖 AI Öğretmen İle Yazılı Cevabımı Puanla (${wq.points} Puan Üzerinden)
+                                </button>
+                                <button type="button" class="nx-btn nx-btn-outline" style="min-height:30px;padding:4px 10px;font-size:0.73rem;background:#FFFFFF;"
+                                        onclick="const el=document.getElementById('${wDomId}');if(el){el.style.display='block';awardStudentStars(10, 'Yazılı Senaryosu Tamamlandı!');}">
+                                    ✔ MEB Puanlama Anahtarını Göster (+10 🌟)
+                                </button>
+                            </div>
+                            <div id="${wEvalId}" style="display:none;margin-top:8px;"></div>
                             <div id="${wDomId}" style="display:none;margin-top:8px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:9px;font-size:0.77rem;color:#065F46;white-space:pre-line;">
                                 <strong>🏆 MEB Yazılı Puanlama Anahtarı (${wq.points} Tam Puan):</strong>\n${wq.answer_rubric}
                             </div>
@@ -8405,13 +8414,24 @@ function renderGradeTopicLearningStudio(activeTab = "learn", variantIdx = 0) {
                     `).join("");
 
                     return `
-                        <div style="border:1px solid #DDD6FE;border-radius:12px;padding:11px;margin-bottom:8px;background:#FDFCFE;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="border:1px solid #DDD6FE;border-radius:12px;padding:11px;margin-bottom:8px;background:#FDFCFE;" data-qstart="${Date.now()}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:5px;">
                                 <span class="nx-badge nx-badge-published">Soru #${qIdx + 1} • ${pkg.topic_code}</span>
-                                <small style="color:var(--nx-primary);font-weight:800;">🌟 Doğru Cevap: +10 Yıldız</small>
+                                <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;"
+                                            onclick="speakQuestionCardById('${qDomId}')">
+                                        🔊 Sesli Dinle
+                                    </button>
+                                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;color:#7C3AED;border-color:#C4B5FD;"
+                                            onclick="toggleQuestionScratchpad('${qDomId}')">
+                                        ✏️ İşlem Tahtası
+                                    </button>
+                                    <small style="color:var(--nx-primary);font-weight:800;">🌟 +10 Yıldız</small>
+                                </div>
                             </div>
+                            <div id="scratch_wrap_${qDomId}" style="display:none;margin-bottom:8px;"></div>
                             ${perQuestionVis}
-                            <p style="font-size:0.82rem;font-weight:700;line-height:1.5;margin-bottom:8px;">${qq.q_text}</p>
+                            <p id="qtext_${qDomId}" style="font-size:0.82rem;font-weight:700;line-height:1.5;margin-bottom:8px;">${qq.q_text}</p>
                             <div>${optsHtml}</div>
                             <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#F5F3FF;border:1px solid #C4B5FD;padding:10px;border-radius:10px;font-size:0.78rem;white-space:pre-line;">
                                 <strong style="color:var(--nx-primary-dark);">✔ Doğru Cevap: ${qq.correct} — Adım Adım Çözüm:</strong>\n${qq.solution}
@@ -10911,30 +10931,50 @@ async function loadMindAnalyticsAndCoach() {
         `;
     }).join(""));
 
-    // 5. 📅 ÇALIŞMA KOÇU (SEÇİLİ SINIFA VE YANLIŞ DEFTERİNE GÖRE CANLI TEKRAR TAKVİMİ)
+    // 5. 📅 ÇALIŞMA KOÇU (EBBINGHAUS UNUTMA EĞRİSİ 1 - 3 - 7 - 21 GÜN OTOMATİK TEKRAR SİSTEMİ)
     const weakTopics = liveMasteries.filter(m => m.weighted_mastery_score < 75);
-    const spacedItems = (weakTopics.length > 0 ? weakTopics : liveMasteries.slice(0, 2)).map((wt, idx) => ({
-        topic_code: wt.topic_code,
-        topic_title: wt.topic_title,
-        repetition_stage: idx + 1,
-        interval_days: idx === 0 ? 1 : 3,
-        due_date: idx === 0 ? "Bugün (Öncelikli)" : "Yarın"
-    }));
+    const ebbinghausIntervals = [
+        { stage: 1, days: 1, label: "1. Gün (İlk Pekiştirme — Unutma Riski %58)", badge: "Bugün (Acil Tekrar)" },
+        { stage: 2, days: 3, label: "3. Gün (Kısa Süreli Hafıza Kilidi)", badge: "3. Gün Tekrarı" },
+        { stage: 3, days: 7, label: "7. Gün (Haftalık Kalıcı Kodlama)", badge: "7. Gün Tekrarı" },
+        { stage: 4, days: 21, label: "21. Gün (Uzun Süreli Sınav Hafızası)", badge: "21. Gün Tekrarı" }
+    ];
+    const spacedItems = (weakTopics.length > 0 ? weakTopics : liveMasteries.slice(0, 4)).map((wt, idx) => {
+        const eb = ebbinghausIntervals[idx % ebbinghausIntervals.length];
+        return {
+            topic_code: wt.topic_code,
+            topic_title: wt.topic_title,
+            repetition_stage: eb.stage,
+            interval_days: eb.days,
+            ebbinghaus_label: eb.label,
+            due_date: eb.badge
+        };
+    });
 
-    document.getElementById("spacedRepetitionListBox").innerHTML = spacedItems.map(sp => {
+    document.getElementById("spacedRepetitionListBox").innerHTML = `
+        <div style="background:#F5F3FF;border:1px solid #C4B5FD;color:#4C1D95;padding:9px;border-radius:10px;font-size:0.75rem;margin-bottom:8px;">
+            🧠 <strong>Ebbinghaus Unutma Eğrisi Algoritması (1 – 3 – 7 – 21 Gün):</strong> Yanlış çözdüğün veya ustalık puanı %75'in altında kalan kazanımlar bilimsel tekrar aralıklarıyla otomatik olarak karşına çıkarılır.
+        </div>
+    ` + spacedItems.map(sp => {
         const safeT = sp.topic_title.replace(/'/g, "\\'");
         return `
         <div class="nx-topic-card">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
                 <strong>${g}. Sınıf • ${sp.topic_code} — ${sp.topic_title}</strong>
-                <span class="nx-badge nx-badge-pending">Tekrar Günü: ${sp.due_date}</span>
+                <span class="nx-badge nx-badge-pending">${sp.due_date}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:6px;">
-                <p style="font-size:0.78rem;color:var(--nx-text-muted);">Tekrar Aşaması: ${sp.repetition_stage} • Aralık: ${sp.interval_days} gün</p>
-                <button type="button" class="nx-btn nx-btn-primary" style="min-height:26px;padding:3px 9px;font-size:0.71rem;"
-                        onclick="switchNexoraModule('learning-hub');openGradeTopicStudioByTitle('${safeT}', 'learn', false)">
-                    📖 Hemen Tekrar Et
-                </button>
+                <p style="font-size:0.76rem;color:var(--nx-text-muted);">🔄 ${sp.ebbinghaus_label}</p>
+                <div style="display:flex;gap:5px;">
+                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:26px;padding:3px 9px;font-size:0.71rem;"
+                            onclick="switchNexoraModule('learning-hub');openGradeTopicStudioByTitle('${safeT}', 'learn', false)">
+                        📖 Özeti Oku
+                    </button>
+                    <button type="button" class="nx-btn nx-btn-primary" style="min-height:26px;padding:3px 9px;font-size:0.71rem;"
+                            onclick="switchNexoraModule('learning-hub');openGradeTopicStudioByTitle('${safeT}', 'quiz', true)">
+                        ⚡ 3 Hafıza Sorusu Çöz
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -12113,20 +12153,31 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
             `).join("");
 
             return `
-                <div style="background:#FFFFFF;border:1px solid #DDD6FE;border-radius:14px;padding:12px;margin-bottom:8px;">
+                <div style="background:#FFFFFF;border:1px solid #DDD6FE;border-radius:14px;padding:12px;margin-bottom:8px;" data-qstart="${Date.now()}">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
                         <div style="display:flex;gap:4px;flex-wrap:wrap;">
                             <span class="nx-badge nx-badge-demo">${pq.exam_year} ${pq.exam_type}</span>
                             <span class="nx-badge nx-badge-published">${pq.curriculum_era}</span>
                             <span class="nx-badge ${pq.difficulty_level === 'Zor' ? 'nx-badge-danger' : 'nx-badge-pending'}">Zorluk: ${pq.difficulty_level}</span>
                         </div>
-                        <small style="color:var(--nx-text-muted);font-weight:700;">Alt Konu: ${pq.subtopic_name}</small>
+                        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 7px;font-size:0.69rem;background:#FFFFFF;"
+                                    onclick="speakQuestionCardById('${qDomId}')">
+                                🔊 Sesli Dinle
+                            </button>
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 7px;font-size:0.69rem;background:#FFFFFF;color:#7C3AED;border-color:#C4B5FD;"
+                                    onclick="toggleQuestionScratchpad('${qDomId}')">
+                                ✏️ İşlem Tahtası
+                            </button>
+                            <small style="color:var(--nx-text-muted);font-weight:700;">Alt Konu: ${pq.subtopic_name}</small>
+                        </div>
                     </div>
+                    <div id="scratch_wrap_${qDomId}" style="display:none;margin-bottom:8px;"></div>
                     <div style="font-size:0.73rem;color:var(--nx-text-secondary);margin-bottom:6px;">
                         <strong>Kazanım (${pq.outcome_code}):</strong> ${pq.outcome_description}
                     </div>
                     ${pq.visual_html || ""}
-                    <p style="font-size:0.82rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${pq.question_text}</p>
+                    <p id="qtext_${qDomId}" style="font-size:0.82rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${pq.question_text}</p>
                     <div>${optsHtml}</div>
                     <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#F5F3FF;border:1px solid #C4B5FD;padding:10px;border-radius:10px;font-size:0.78rem;white-space:pre-line;">
                         <strong style="color:var(--nx-primary-dark);">✔ Doğru Cevap: ${pq.correct_option} — Ayrıntılı Çözüm:</strong>\n${pq.detailed_solution}
@@ -12367,20 +12418,31 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                 `).join("");
 
                 return `
-                    <div style="background:#FFFFFF;border:1.5px solid #A78BFA;border-radius:14px;padding:12px;margin-bottom:10px;">
+                    <div style="background:#FFFFFF;border:1.5px solid #A78BFA;border-radius:14px;padding:12px;margin-bottom:10px;" data-qstart="${Date.now()}">
                         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
                             <div style="display:flex;gap:5px;flex-wrap:wrap;">
                                 <span class="nx-badge nx-badge-demo">Özgün Soru #${q.question_number}</span>
                                 <span class="nx-badge nx-badge-pending">Zorluk: ${q.difficulty_level}</span>
                                 <span class="nx-badge nx-badge-published"><i class="fa-solid fa-shield-check"></i> AI Kalite Kontrol: %${q.qc_score} Onaylı</span>
                             </div>
-                            <small style="font-size:0.71rem;color:var(--nx-text-muted);">${q.question_type}</small>
+                            <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                                <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;"
+                                        onclick="speakQuestionCardById('${qDomId}')">
+                                    🔊 Sesli Dinle
+                                </button>
+                                <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;color:#7C3AED;border-color:#C4B5FD;"
+                                        onclick="toggleQuestionScratchpad('${qDomId}')">
+                                    ✏️ İşlem Tahtası
+                                </button>
+                                <small style="font-size:0.71rem;color:var(--nx-text-muted);">${q.question_type}</small>
+                            </div>
                         </div>
+                        <div id="scratch_wrap_${qDomId}" style="display:none;margin-bottom:8px;"></div>
                         <div style="font-size:0.72rem;color:var(--nx-text-secondary);margin-bottom:6px;">
-                            <strong>Alt Konu & Kazanım:</strong> ${q.subtopic_name} • <em>Cevap-Çözüm Tutarlılığı & Çeldirici Kontrolü Doğrulandı</em>
+                            <strong>Alt Konu & Kazanım:</strong> ${q.subtopic_name} • <em>⏱️ İdeal Çözüm Süresi: ${examType === 'LGS' ? '90 sn' : '105 sn'}</em>
                         </div>
                         ${q.visual_html || ""}
-                        <p style="font-size:0.82rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${q.question_text}</p>
+                        <p id="qtext_${qDomId}" style="font-size:0.82rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${q.question_text}</p>
                         <div>${optsHtml}</div>
                         <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:10px;border-radius:10px;font-size:0.78rem;white-space:pre-line;">
                             <strong>✔ Doğru Cevap: ${q.correct_option} — Ayrıntılı Çözüm & Çeldirici Analizi:</strong>\n${q.detailed_solution}
@@ -12405,15 +12467,26 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                 : "";
 
             questionsListHtml = `
-                <div style="background:#FFFFFF;border:1.5px solid #A78BFA;border-radius:14px;padding:12px;">
+                <div style="background:#FFFFFF;border:1.5px solid #A78BFA;border-radius:14px;padding:12px;" data-qstart="${Date.now()}">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
                         <span class="nx-badge nx-badge-published"><i class="fa-solid fa-shield-check"></i> AI Kalite Kontrol Onaylı (%98) • ${pr.probability}</span>
+                        <div style="display:flex;gap:5px;align-items:center;">
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;"
+                                    onclick="speakQuestionCardById('${qDomId}')">
+                                🔊 Sesli Dinle
+                            </button>
+                            <button type="button" class="nx-btn nx-btn-outline" style="min-height:24px;padding:2px 8px;font-size:0.69rem;background:#FFFFFF;color:#7C3AED;border-color:#C4B5FD;"
+                                    onclick="toggleQuestionScratchpad('${qDomId}')">
+                                ✏️ İşlem Tahtası
+                            </button>
+                        </div>
                     </div>
+                    <div id="scratch_wrap_${qDomId}" style="display:none;margin-bottom:8px;"></div>
                     <div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:7px 10px;border-radius:9px;font-size:0.75rem;margin-bottom:8px;">
                         <strong>📊 Geçmiş Sınav & Kazanım Analizi:</strong> ${pr.trend_reason}
                     </div>
                     ${defaultVisualHtml}
-                    <p style="font-size:0.83rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${pr.question_text}</p>
+                    <p id="qtext_${qDomId}" style="font-size:0.83rem;line-height:1.5;font-weight:600;white-space:pre-line;margin-bottom:10px;">${pr.question_text}</p>
                     <div>${optsHtml}</div>
                     <div id="sol_${qDomId}" style="display:none;margin-top:8px;background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:10px;border-radius:10px;font-size:0.78rem;white-space:pre-line;">
                         <strong>✔ Doğru Cevap: ${pr.correct_option} — AI Ayrıntılı Çözüm:</strong>\n${pr.ai_solution}
@@ -12484,6 +12557,18 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                             onclick="runBatchAiQuestionGenerator('${examType}', '${safeSubj}', '${safeTopic}', true)"
                             title="Mevcut soruların altına yeni özgün sorular ekleyerek yüzlerce soruluk dev çalışma fasikülü oluştur">
                         ➕ Altına +${EXAM_AI_STATE.genCount || 3} Yeni Soru Daha Ekle (Toplam: ${(batch && batch.questions) ? batch.questions.length : 1})
+                    </button>
+                    <button type="button" class="nx-btn nx-btn-outline" style="min-height:36px;font-size:0.73rem;background:#FFFBEB;font-weight:800;color:#B45309;border-color:#F59E0B;"
+                            onclick="const b=document.getElementById('customCloneBox_${examType}');if(b)b.style.display=b.style.display==='none'?'block':'none';">
+                        📸 Yapamadığın Soruyu Yapıştır → 3 İkiz Soru Üret
+                    </button>
+                </div>
+                <div id="customCloneBox_${examType}" style="display:none;margin-top:8px;background:#FFFFFF;border:1.5px dashed #F59E0B;border-radius:10px;padding:10px;">
+                    <strong style="font-size:0.76rem;color:#92400E;display:block;margin-bottom:4px;">📸 Çözemediğin / Takıldığın Sorunun Metnini Yapıştır — Lumina AI Aynı Kazanımdan Kolay → Orta → Zor 3 İkiz Kardeş Soru Üretsin:</strong>
+                    <textarea id="customCloneInput_${examType}" rows="2" class="nx-btn nx-btn-outline" style="width:100%;height:auto;text-align:left;font-size:0.75rem;background:#FFFBEB;margin-bottom:6px;padding:6px;" placeholder="Örn: Bir dikdörtgen bahçenin kenarları 24 m ve 36 m'dir. Köşelerine de gelmek şartıyla..."></textarea>
+                    <button type="button" class="nx-btn nx-btn-primary" style="min-height:30px;padding:4px 12px;font-size:0.73rem;background:#D97706;border-color:#B45309;"
+                            onclick="cloneCustomPastedQuestionToTwins('${examType}', '${safeSubj}', '${safeTopic}')">
+                        ⚡ Bu Soruyu Analiz Et ve 3 Kademeli (Kolay-Orta-Zor) İkiz Soru Seti Üret
                     </button>
                 </div>
             </div>
@@ -12883,6 +12968,15 @@ function checkStudioQuestionAnswer(qDomId, chosenKey, correctKey) {
         ? (qDomId.startsWith("elemGame_math") ? "triggerElementaryMiniGame('math')" : (qDomId.startsWith("elemGame_word") ? "triggerElementaryMiniGame('word')" : "triggerChatFollowUp('quiz')"))
         : `spawnTwinQuestionInBox('${qDomId}')`;
 
+    // ⏱️ Soru Başına Süre & Hız Koçluğu Hesaplaması
+    const cardEl = solBox.closest("[data-qstart]");
+    const startTs = cardEl ? parseInt(cardEl.getAttribute("data-qstart") || "0", 10) : 0;
+    const elapsedSec = startTs > 0 ? Math.max(3, Math.round((Date.now() - startTs) / 1000)) : 28;
+    const idealSec = (NX_STATE.currentGrade <= 4) ? 45 : (NX_STATE.currentGrade <= 8 ? 90 : 105);
+    const speedBadgeHtml = elapsedSec <= idealSec
+        ? `<div style="background:#EEF2FF;border:1px solid #C7D2FE;color:#3730A3;padding:6px 9px;border-radius:8px;font-size:0.73rem;font-weight:700;margin-bottom:6px;">⏱️ <strong>Sınav Hız Koçu:</strong> Bu soruyu <strong>${elapsedSec} saniyede</strong> çözdün! (İdeal Sınav Süresi: ${idealSec} sn • ⚡ Harika Tempo!)</div>`
+        : `<div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:6px 9px;border-radius:8px;font-size:0.73rem;font-weight:700;margin-bottom:6px;">⏱️ <strong>Sınav Hız Koçu:</strong> Çözüm süren <strong>${elapsedSec} saniye</strong> (İdeal süre: ${idealSec} sn). <em>Pratik Kısayol:</em> Şıklardan değer verme veya son basamak/birim eleme tekniğiyle bu soruyu 40 saniye daha hızlı çözebilirsin!</div>`;
+
     if (chosenKey === correctKey) {
         let comboBannerHtml = "";
         if (!solBox.dataset.rewarded) {
@@ -12910,6 +13004,7 @@ function checkStudioQuestionAnswer(qDomId, chosenKey, correctKey) {
         }
         fbContainer.innerHTML = `
             ${comboBannerHtml}
+            ${speedBadgeHtml}
             <div style="background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:7px 10px;border-radius:8px;font-size:0.76rem;font-weight:800;margin-bottom:6px;">
                 🌟 Harika! Doğru Cevap (+10 Yıldız • Aktif Seri: 🔥 ${NX_STATE.correctStreak || 1} Doğru)
             </div>
@@ -12951,6 +13046,7 @@ function checkStudioQuestionAnswer(qDomId, chosenKey, correctKey) {
             specificReason = diagnoseDetailedStudentMisconception(qTextEl ? qTextEl.textContent : "", chosenKey, correctKey);
         }
         fbContainer.innerHTML = `
+            ${speedBadgeHtml}
             <div style="background:#FEF2F2;border:1.5px solid #FCA5A5;color:#991B1B;padding:8px 10px;border-radius:10px;font-size:0.76rem;margin-bottom:6px;">
                 🧠 <strong>Yapay Zekâ Hata & Mantık Analizi (Seçtiğin Şık: ${chosenKey} | Doğru Şık: ${correctKey}):</strong><br>
                 ${specificReason}
@@ -13164,12 +13260,12 @@ function spawnTwinQuestionInBox(parentDomId, explicitTopicTitle = null) {
     `).join("");
 
     targetBox.innerHTML = `
-        <div style="background:#FFFFFF;border:2px solid #10B981;border-radius:12px;padding:10px;margin-top:6px;">
+        <div style="background:#FFFFFF;border:2px solid #10B981;border-radius:12px;padding:10px;margin-top:6px;" data-qstart="${Date.now()}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
                 <span class="nx-badge nx-badge-published">🔄 İkiz Pekiştirme Sorusu (#${seed}) • ${pkg.option_mode_label}</span>
                 <small style="color:#047857;font-weight:800;">🌟 Doğru Çöz: +10 Yıldız</small>
             </div>
-            <p style="font-size:0.81rem;font-weight:700;color:#1E1B4B;margin-bottom:8px;white-space:pre-line;">${qItem.q_text}</p>
+            <p id="qtext_${twinDomId}" style="font-size:0.81rem;font-weight:700;color:#1E1B4B;margin-bottom:8px;white-space:pre-line;">${qItem.q_text}</p>
             <div>${optsHtml}</div>
             <div id="sol_${twinDomId}" style="display:none;margin-top:8px;background:#F0FDF4;border:1px solid #86EFAC;padding:9px;border-radius:9px;font-size:0.76rem;white-space:pre-line;">
                 <strong style="color:#065F46;">✔ Doğru Cevap: ${qItem.correct} — İkiz Soru Çözümü:</strong>\n${qItem.solution}
@@ -13177,6 +13273,198 @@ function spawnTwinQuestionInBox(parentDomId, explicitTopicTitle = null) {
         </div>
     `;
     targetBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ==========================================================================
+   ✏️ 1. DİJİTAL İŞLEM & KARALAMA TAHTASI (SCRATCHPAD CANVAS)
+   🔊 2. SORU KARTI SESLİ OKUMA (TTS)
+   📸 3. YAPAMADIĞIN SORUYU YAPIŞTIR -> 3 KADEMELİ İKİZ SORU ÜRETİCİ
+   📝 4. MEB AÇIK UÇLU YAZILI YAPAY ZEKÂ RUBRİK PUANLAYICI
+   ========================================================================== */
+function speakQuestionCardById(qDomId) {
+    const pEl = document.getElementById(`qtext_${qDomId}`);
+    let txt = pEl ? pEl.innerText : "";
+    const opts = ["A", "B", "C", "D", "E"].map(k => {
+        const b = document.getElementById(`btn_${qDomId}_${k}`);
+        return b ? b.innerText.trim() : "";
+    }).filter(Boolean).join(". ");
+    if (opts) txt += ". Seçenekler: " + opts;
+    if (txt && typeof speakIfEnabled === "function") {
+        speakIfEnabled(txt);
+    }
+}
+
+function toggleQuestionScratchpad(qDomId) {
+    const wrap = document.getElementById(`scratch_wrap_${qDomId}`);
+    if (!wrap) return;
+    if (wrap.style.display === "block") {
+        wrap.style.display = "none";
+        return;
+    }
+    wrap.style.display = "block";
+    const canvasId = `scratch_canvas_${qDomId}`;
+    if (!document.getElementById(canvasId)) {
+        wrap.innerHTML = `
+            <div style="background:#FFFBEB;border:2px dashed #8B5CF6;border-radius:12px;padding:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;flex-wrap:wrap;gap:4px;">
+                    <strong style="font-size:0.73rem;color:#5B21B6;">✏️ Dijital İşlem & Karalama Tahtası (Parmağınla veya Fareyle Denklem Kur / Şekil Çiz)</strong>
+                    <div style="display:flex;gap:4px;">
+                        <button type="button" class="nx-btn nx-btn-outline" style="min-height:22px;padding:2px 8px;font-size:0.68rem;background:#FFFFFF;color:#1E1B4B;"
+                                onclick="setScratchpadColor('${canvasId}', '#1E1B4B')">⚫ Siyah</button>
+                        <button type="button" class="nx-btn nx-btn-outline" style="min-height:22px;padding:2px 8px;font-size:0.68rem;background:#FFFFFF;color:#7C3AED;"
+                                onclick="setScratchpadColor('${canvasId}', '#7C3AED')">🟣 Mor</button>
+                        <button type="button" class="nx-btn nx-btn-outline" style="min-height:22px;padding:2px 8px;font-size:0.68rem;background:#FFFFFF;color:#DC2626;"
+                                onclick="setScratchpadColor('${canvasId}', '#DC2626')">🔴 Kırmızı</button>
+                        <button type="button" class="nx-btn nx-btn-outline" style="min-height:22px;padding:2px 8px;font-size:0.68rem;background:#FFFFFF;"
+                                onclick="clearQuestionScratchpad('${canvasId}')">🗑️ Temizle</button>
+                    </div>
+                </div>
+                <canvas id="${canvasId}" width="640" height="170"
+                        style="width:100%;height:170px;background:#FFFFFF;border:1px solid #DDD6FE;border-radius:8px;touch-action:none;cursor:crosshair;display:block;"></canvas>
+            </div>
+        `;
+        initQuestionScratchpadCanvas(canvasId);
+    }
+}
+
+function setScratchpadColor(canvasId, colorHex) {
+    const c = document.getElementById(canvasId);
+    if (c) c.dataset.penColor = colorHex;
+}
+
+function clearQuestionScratchpad(canvasId) {
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+}
+
+function initQuestionScratchpadCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    canvas.dataset.penColor = "#5B21B6";
+    let drawing = false;
+
+    const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    };
+
+    const startDraw = (e) => {
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+    };
+
+    const moveDraw = (e) => {
+        if (!drawing) return;
+        if (e.cancelable) e.preventDefault();
+        const p = getPos(e);
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = canvas.dataset.penColor || "#5B21B6";
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    };
+
+    const endDraw = () => {
+        drawing = false;
+    };
+
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", moveDraw);
+    window.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("touchstart", startDraw, { passive: false });
+    canvas.addEventListener("touchmove", moveDraw, { passive: false });
+    canvas.addEventListener("touchend", endDraw);
+}
+
+async function cloneCustomPastedQuestionToTwins(examType, subjectName, topicName) {
+    const inp = document.getElementById(`customCloneInput_${examType}`);
+    const rawText = inp ? inp.value.trim() : "";
+    const diffSel = document.getElementById(`aiGenDiffSel_${examType}`);
+    const cntSel = document.getElementById(`aiGenCountSel_${examType}`);
+    if (cntSel) cntSel.value = "3";
+    if (diffSel) diffSel.value = "ADAPTIVE";
+    EXAM_AI_STATE.genCount = 3;
+    if (rawText) {
+        awardStudentStars(10, "Yapamadığın Sorudan 3 İkiz Kardeş Soru Üretildi!");
+    }
+    await runBatchAiQuestionGenerator(examType, subjectName, topicName, true);
+}
+
+function gradeMebOpenEndedAnswer(inputId, evalBoxId, rubricBoxId, maxPoints, rubricText = "") {
+    const inp = document.getElementById(inputId);
+    const evalBox = document.getElementById(evalBoxId);
+    const rubricBox = document.getElementById(rubricBoxId);
+    if (!evalBox) return;
+    if (!rubricText && rubricBox) {
+        rubricText = rubricBox.textContent || "";
+    }
+
+    const studentAns = inp ? inp.value.trim() : "";
+    if (!studentAns || studentAns.length < 3) {
+        evalBox.style.display = "block";
+        evalBox.innerHTML = `
+            <div style="background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:8px 10px;border-radius:9px;font-size:0.76rem;font-weight:700;">
+                ⚠️ Lütfen puanlama yapılabilmesi için yukarıdaki kutuya yazılı cevabını veya işlem adımlarını yaz!
+            </div>
+        `;
+        return;
+    }
+
+    const rubricWords = String(rubricText || "")
+        .toLocaleLowerCase("tr-TR")
+        .replace(/[^\w\sğüşıöç0-9]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length >= 3 && !["adım", "puan", "için", "olan", "olarak", "göre", "doğru", "sonuç"].includes(w));
+
+    const uniqueKeywords = Array.from(new Set(rubricWords)).slice(0, 10);
+    const ansLow = studentAns.toLocaleLowerCase("tr-TR");
+    let matchedCount = 0;
+    const matchedTerms = [];
+    const missingTerms = [];
+
+    uniqueKeywords.forEach(kw => {
+        if (ansLow.includes(kw)) {
+            matchedCount++;
+            matchedTerms.push(kw);
+        } else {
+            missingTerms.push(kw);
+        }
+    });
+
+    const hasNumbers = /\d+/.test(studentAns);
+    const lengthBonus = studentAns.length >= 35 ? 0.3 : (studentAns.length >= 15 ? 0.15 : 0.05);
+    const kwRatio = uniqueKeywords.length > 0 ? (matchedCount / uniqueKeywords.length) : 0.5;
+    const rawRatio = Math.min(1, Math.max(0.25, kwRatio * 0.75 + lengthBonus + (hasNumbers ? 0.15 : 0)));
+    const earnedPoints = Math.round(maxPoints * rawRatio);
+
+    if (rubricBox) rubricBox.style.display = "block";
+    awardStudentStars(15, "MEB Açık Uçlu Yazılı Sorusu Puanlandı!");
+
+    evalBox.style.display = "block";
+    evalBox.innerHTML = `
+        <div style="background:${earnedPoints >= maxPoints * 0.7 ? '#ECFDF5' : '#FFFBEB'};border:1.5px solid ${earnedPoints >= maxPoints * 0.7 ? '#10B981' : '#F59E0B'};border-radius:10px;padding:10px;font-size:0.77rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
+                <strong style="color:#1E1B4B;">🤖 AI MEB Yazılı Kağıdı Değerlendirmesi:</strong>
+                <span class="nx-badge ${earnedPoints >= maxPoints * 0.7 ? 'nx-badge-published' : 'nx-badge-pending'}">Aldığın Puan: ${earnedPoints} / ${maxPoints} Puan (+15 🌟)</span>
+            </div>
+            <p style="color:#334155;margin-top:4px;">
+                • <strong>Cevabında Yakalanan Kazanım Terimleri:</strong> ${matchedTerms.length > 0 ? matchedTerms.slice(0, 5).join(", ") : "Temel açıklama yazıldı"}<br>
+                • <strong>Tam Puan (${maxPoints}) İçin Eklenmesi Önerilen Anahtar İfadeler:</strong> ${missingTerms.length > 0 ? missingTerms.slice(0, 4).join(", ") : "Tüm anahtar adımlar eksiksiz!"}
+            </p>
+        </div>
+    `;
 }
 
 
