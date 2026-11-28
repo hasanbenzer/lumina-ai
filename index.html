@@ -12469,15 +12469,23 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
                         <option value="5" ${EXAM_AI_STATE.genCount === 5 ? 'selected' : ''}>Soru Sayısı: 5 Soru</option>
                         <option value="10" ${EXAM_AI_STATE.genCount === 10 ? 'selected' : ''}>Soru Sayısı: 10 Soru</option>
                         <option value="20" ${EXAM_AI_STATE.genCount === 20 ? 'selected' : ''}>Soru Sayısı: 20 Soru (Tam Test)</option>
+                        <option value="40" ${EXAM_AI_STATE.genCount === 40 ? 'selected' : ''}>Soru Sayısı: 40 Soru (Maraton Seti)</option>
                     </select>
                     <select id="aiGenTypeSel_${examType}" class="nx-btn nx-btn-outline" style="font-size:0.73rem;">
                         ${modeOptsHtml}
                     </select>
                 </div>
-                <button class="nx-btn nx-btn-primary" style="width:100%;"
-                        onclick="runBatchAiQuestionGenerator('${examType}', '${safeSubj}', '${safeTopic}')">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> 8 Aşamalı Kalite Kontrolünden Geçmiş Yeni Sorular Üret
-                </button>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="nx-btn nx-btn-primary" style="flex:1;"
+                            onclick="runBatchAiQuestionGenerator('${examType}', '${safeSubj}', '${safeTopic}', false)">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Yeni Soru Seti Üret (8 Aşamalı QC)
+                    </button>
+                    <button class="nx-btn nx-btn-outline" style="min-height:36px;font-size:0.74rem;background:#FFFFFF;font-weight:800;color:#7C3AED;border-color:#7C3AED;"
+                            onclick="runBatchAiQuestionGenerator('${examType}', '${safeSubj}', '${safeTopic}', true)"
+                            title="Mevcut soruların altına yeni özgün sorular ekleyerek yüzlerce soruluk dev çalışma fasikülü oluştur">
+                        ➕ Altına +${EXAM_AI_STATE.genCount || 3} Yeni Soru Daha Ekle (Toplam: ${(batch && batch.questions) ? batch.questions.length : 1})
+                    </button>
+                </div>
             </div>
             ${questionsListHtml}
         `;
@@ -12645,11 +12653,16 @@ function renderAiStudioCard(examType, subjectName, topicName, activeMode, varian
     `;
 }
 
-async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
+async function runBatchAiQuestionGenerator(examType, subjectName, topicName, appendToExisting = false) {
     const subSel = document.getElementById(`aiGenSubtopicSel_${examType}`);
     const diffSel = document.getElementById(`aiGenDiffSel_${examType}`);
     const cntSel = document.getElementById(`aiGenCountSel_${examType}`);
     const typeSel = document.getElementById(`aiGenTypeSel_${examType}`);
+
+    const existingList = (appendToExisting && EXAM_AI_STATE.generatedBatch && Array.isArray(EXAM_AI_STATE.generatedBatch.questions))
+        ? EXAM_AI_STATE.generatedBatch.questions
+        : [];
+    const startNumber = existingList.length;
 
     EXAM_AI_STATE.genSubtopic = subSel ? subSel.value : "Tüm Alt Konular";
     EXAM_AI_STATE.genDifficulty = diffSel ? diffSel.value : "Orta-Zor";
@@ -12674,31 +12687,40 @@ async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
                 subtopic_name: EXAM_AI_STATE.genSubtopic,
                 count: EXAM_AI_STATE.genCount,
                 difficulty_level: EXAM_AI_STATE.genDifficulty,
-                generation_mode: EXAM_AI_STATE.genQuestionType
+                generation_mode: EXAM_AI_STATE.genQuestionType,
+                exclude_texts: existingList.map(q => q.question_text)
             })
         });
         if (!res.ok) throw new Error("Offline batch fallback");
         const apiData = await res.json();
+        const existingNorms = new Set(existingList.map(q => String(q.question_text || "").trim()));
+        const uniqueApiQuestions = (apiData.questions || []).filter(q => {
+            const qt = String(q.question_text || "").trim();
+            if (!qt || existingNorms.has(qt)) return false;
+            existingNorms.add(qt);
+            return true;
+        });
+        const newMapped = uniqueApiQuestions.map((q, idx) => ({
+            question_number: startNumber + idx + 1,
+            exam_type: q.exam_type,
+            subject_name: q.subject_name,
+            topic_name: q.topic_name,
+            subtopic_name: q.subtopic_name,
+            difficulty_level: q.difficulty_level === "ADAPTIVE" ? humanDiffLabel : q.difficulty_level,
+            question_type: humanModeLabel,
+            visual_html: typeof buildUniquePerQuestionVisualSvg === "function"
+                ? buildUniquePerQuestionVisualSvg(subjectName, topicName, q.question_text, 2026 + ((startNumber + idx) % 2), startNumber + idx)
+                : "",
+            question_text: q.question_text,
+            options: q.options,
+            correct_option: q.correct_option,
+            detailed_solution: q.detailed_solution,
+            qc_passed: true,
+            qc_score: q.validation_score || 100
+        }));
         EXAM_AI_STATE.generatedBatch = {
             success: true,
-            questions: (apiData.questions || []).map((q, idx) => ({
-                question_number: idx + 1,
-                exam_type: q.exam_type,
-                subject_name: q.subject_name,
-                topic_name: q.topic_name,
-                subtopic_name: q.subtopic_name,
-                difficulty_level: q.difficulty_level === "ADAPTIVE" ? humanDiffLabel : q.difficulty_level,
-                question_type: humanModeLabel,
-                visual_html: typeof buildUniquePerQuestionVisualSvg === "function"
-                    ? buildUniquePerQuestionVisualSvg(subjectName, topicName, q.question_text, 2026 + (idx % 2), idx)
-                    : "",
-                question_text: q.question_text,
-                options: q.options,
-                correct_option: q.correct_option,
-                detailed_solution: q.detailed_solution,
-                qc_passed: true,
-                qc_score: q.validation_score || 100
-            }))
+            questions: existingList.concat(newMapped)
         };
     } catch (e) {
         // İstemci tarafı 12 farklı yeni nesil arketip, 8 aşamalı kalite kontrol ve öğrenci hafızası tekrarsızlık üreticisi
@@ -12729,7 +12751,7 @@ async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
             const qOpts = synth ? synth.options : pkg.predicted_question.options;
             const qAns = synth ? synth.correct : pkg.predicted_question.correct_option;
             const qSol = synth ? synth.solution : pkg.predicted_question.ai_solution;
-            const qNum = i + 1;
+            const qNum = startNumber + i + 1;
 
             questions.push({
                 question_number: qNum,
@@ -12753,7 +12775,7 @@ async function runBatchAiQuestionGenerator(examType, subjectName, topicName) {
         EXAM_AI_STATE.clientGenCursor = cursor;
         EXAM_AI_STATE.generatedBatch = {
             success: true,
-            questions: questions
+            questions: existingList.concat(questions)
         };
     }
 
